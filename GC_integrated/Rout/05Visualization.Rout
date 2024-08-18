@@ -1,0 +1,777 @@
+
+R version 4.4.0 (2024-04-24) -- "Puppy Cup"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R は、自由なソフトウェアであり、「完全に無保証」です。 
+一定の条件に従えば、自由にこれを再配布することができます。 
+配布条件の詳細に関しては、'license()' あるいは 'licence()' と入力してください。 
+
+R は多くの貢献者による共同プロジェクトです。 
+詳しくは 'contributors()' と入力してください。 
+また、R や R のパッケージを出版物で引用する際の形式については 
+'citation()' と入力してください。 
+
+'demo()' と入力すればデモをみることができます。 
+'help()' とすればオンラインヘルプが出ます。 
+'help.start()' で HTML ブラウザによるヘルプがみられます。 
+'q()' と入力すれば R を終了します。 
+
+> library(Seurat)
+要求されたパッケージ SeuratObject をロード中です
+要求されたパッケージ sp をロード中です
+
+次のパッケージを付け加えます: ‘SeuratObject’
+
+以下のオブジェクトは ‘package:base’ からマスクされています:
+
+    intersect, t
+
+> library(tidyverse)
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+> 
+> # umap_objectを読み込み
+> umap_object <- readRDS("data/processed/umap_object.rds")
+> 
+> # 各meta.dataの情報を確認
+> umap_object
+An object of class Seurat 
+69134 features across 357250 samples within 2 assays 
+Active assay: SCT (29370 features, 3000 variable features)
+ 3 layers present: counts, data, scale.data
+ 1 other assay present: RNA
+ 3 dimensional reductions calculated: pca, harmony, umap_harmony
+> head(umap_object)
+                                             orig.ident nCount_RNA nFeature_RNA
+GC_PRJCA004201_GC10P-R2:AAACCTGAGAGTGACC GC_PRJCA004201    1506.21          618
+GC_PRJCA004201_GC10P-R2:AAACCTGAGATGTCGG GC_PRJCA004201    1483.16          870
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCAAATCA GC_PRJCA004201    2442.74         2231
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCTTCGCG GC_PRJCA004201    1862.85         1148
+GC_PRJCA004201_GC10P-R2:AAACCTGAGGACGAAA GC_PRJCA004201    1369.48          471
+GC_PRJCA004201_GC10P-R2:AAACCTGAGTGAAGAG GC_PRJCA004201    1836.97         1238
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAACGTGG GC_PRJCA004201    2508.90         4978
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAATCCGT GC_PRJCA004201    2456.21         2353
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAGCTGTT GC_PRJCA004201    2491.77         3110
+GC_PRJCA004201_GC10P-R2:AAACCTGCACAGACTT GC_PRJCA004201    1938.05         1104
+                                         percent.mt    batch patient    tissue
+GC_PRJCA004201_GC10P-R2:AAACCTGAGAGTGACC   4.852577 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGAGATGTCGG   3.346234 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCAAATCA   2.330989 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCTTCGCG   2.228843 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGAGGACGAAA   5.140637 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGAGTGAAGAG   2.157357 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAACGTGG   1.909602 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAATCCGT   1.672088 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAGCTGTT   1.801932 GC10P-R2    GC10 Paratumor
+GC_PRJCA004201_GC10P-R2:AAACCTGCACAGACTT   2.428730 GC10P-R2    GC10 Paratumor
+                                         Diagnosis Lauren H.pylori
+GC_PRJCA004201_GC10P-R2:AAACCTGAGAGTGACC       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGAGATGTCGG       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCAAATCA       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCTTCGCG       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGAGGACGAAA       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGAGTGAAGAG       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAACGTGG       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAATCCGT       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAGCTGTT       AGC  Mixed        +
+GC_PRJCA004201_GC10P-R2:AAACCTGCACAGACTT       AGC  Mixed        +
+                                         Cancer_location Atrophy  MSI  EBV
+GC_PRJCA004201_GC10P-R2:AAACCTGAGAGTGACC          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGAGATGTCGG          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCAAATCA          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCTTCGCG          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGAGGACGAAA          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGAGTGAAGAG          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAACGTGG          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAATCCGT          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAGCTGTT          Cardia    <NA> <NA> <NA>
+GC_PRJCA004201_GC10P-R2:AAACCTGCACAGACTT          Cardia    <NA> <NA> <NA>
+                                             group nCount_SCT nFeature_SCT
+GC_PRJCA004201_GC10P-R2:AAACCTGAGAGTGACC Non_Tumor       1610          618
+GC_PRJCA004201_GC10P-R2:AAACCTGAGATGTCGG Non_Tumor       1550          870
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCAAATCA Non_Tumor       2495         2166
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCTTCGCG Non_Tumor       1766         1147
+GC_PRJCA004201_GC10P-R2:AAACCTGAGGACGAAA Non_Tumor       1668          499
+GC_PRJCA004201_GC10P-R2:AAACCTGAGTGAAGAG Non_Tumor       1863         1233
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAACGTGG Non_Tumor       1255          972
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAATCCGT Non_Tumor       2559         2242
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAGCTGTT Non_Tumor       1380         1124
+GC_PRJCA004201_GC10P-R2:AAACCTGCACAGACTT Non_Tumor       1639         1104
+                                         SCT_snn_res.0.1 seurat_clusters
+GC_PRJCA004201_GC10P-R2:AAACCTGAGAGTGACC              11              11
+GC_PRJCA004201_GC10P-R2:AAACCTGAGATGTCGG               1               1
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCAAATCA               6               6
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCTTCGCG               1               1
+GC_PRJCA004201_GC10P-R2:AAACCTGAGGACGAAA               1               1
+GC_PRJCA004201_GC10P-R2:AAACCTGAGTGAAGAG               1               1
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAACGTGG               6               6
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAATCCGT              12              12
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAGCTGTT               6               6
+GC_PRJCA004201_GC10P-R2:AAACCTGCACAGACTT               1               1
+                                                  celltype
+GC_PRJCA004201_GC10P-R2:AAACCTGAGAGTGACC        Mast_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGAGATGTCGG           T_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCAAATCA  Epithelial_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGAGCTTCGCG           T_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGAGGACGAAA           T_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGAGTGAAGAG           T_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAACGTGG  Epithelial_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAATCCGT Endothelial_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGCAAGCTGTT  Epithelial_cells
+GC_PRJCA004201_GC10P-R2:AAACCTGCACAGACTT           T_cells
+> names(umap_object@meta.data)
+ [1] "orig.ident"      "nCount_RNA"      "nFeature_RNA"    "percent.mt"     
+ [5] "batch"           "patient"         "tissue"          "Diagnosis"      
+ [9] "Lauren"          "H.pylori"        "Cancer_location" "Atrophy"        
+[13] "MSI"             "EBV"             "group"           "nCount_SCT"     
+[17] "nFeature_SCT"    "SCT_snn_res.0.1" "seurat_clusters" "celltype"       
+> table(umap_object@meta.data$batch)
+
+      GC01T       GC02T GC02T-Tcell       GC03P    GC03T-R1    GC03T-R2 
+       4030        3560        8903        5538        3731        4326 
+      GC04P       GC04T       GC05P       GC05T       GC06P       GC06T 
+       4559        5583        3694        4229        9260        6132 
+      GC07P       GC07T       GC08P    GC08T-S1    GC08T-S2       GC09P 
+       1986        6100        4557        6958        2351        6154 
+      GC09T    GC10P-R1    GC10P-R2       GC10T GC10T-Tcell     Pat01-A 
+       6287       13886       12161        8546        8347        1963 
+    Pat01-B     Pat02-A     Pat02-B     Pat03-A     Pat03-B     Pat04-A 
+       2722        4804        5485        3570        4247        3125 
+    Pat04-B     Pat05-A     Pat05-B     Pat06-A     Pat06-B     Pat07-A 
+       5245        4083       11853        6938        6294        4023 
+    Pat07-B     Pat08-A     Pat08-B     Pat09-A     Pat09-B     Pat10-A 
+       3415        1538        5870        3474        6054        1670 
+    Pat10-B     Pat11-A     Pat11-B     Pat12-A     Pat12-B     Pat13-A 
+       1527        4956        5235        1669        4162        2915 
+    Pat13-B     Pat14-A     Pat14-B     Pat15-A     Pat15-B     Pat16-A 
+       3211        3368        6980        3416        3523        2042 
+    Pat16-B     Pat17-A     Pat17-B     Pat18-A     Pat18-B     Pat19-A 
+       3292        1498        2335        5205        1709         834 
+    Pat19-B     Pat20-A     Pat20-B     Pat21-A     Pat22-A     Pat22-B 
+       4564        5768        3919        1734        4908        4972 
+    Pat23-A     Pat23-B     Pat24-A     Pat24-B     Pat25-A     Pat26-A 
+       5094        5749        4442        4875        4882        9874 
+    Pat27-A     Pat28-A     Pat29-A 
+       2442        5101        3798 
+> table(umap_object@meta.data$patient)
+
+     GC01      GC02      GC03      GC04      GC05      GC06      GC07      GC08 
+     4030     12463     13595     10142      7923     15392      8086     13866 
+     GC09      GC10  patient1 patient10 patient11 patient12 patient13 patient14 
+    12441     42940      4685      3197     10191      5831      6126     10348 
+patient15 patient16 patient17 patient18 patient19  patient2 patient20 patient21 
+     6939      5334      3833      6914      5398     10289      9687      1734 
+patient22 patient23 patient24 patient25 patient26 patient27 patient28 patient29 
+     9880     10843      9317      4882      9874      2442      5101      3798 
+ patient3  patient4  patient5  patient6  patient7  patient8  patient9 
+     7817      8370     15936     13232      7438      7408      9528 
+> table(umap_object@meta.data$group)
+
+Non_Tumor     Tumor 
+   170929    186321 
+> table(umap_object@meta.data$tissue)
+
+   Normal Paratumor     Tumor 
+    26097    144832    186321 
+> table(umap_object@meta.data$Diagnosis)
+
+        AGC CAG with IM         CSG         EGC 
+     202191        8680       17417      128962 
+> table(umap_object@meta.data$Lauren)
+
+   Diffuse Intestinal      Mixed  Non_Tumor 
+    165460      75754      89939      26097 
+> table(umap_object@meta.data$H.pylori)
+
+        -         + Equivocal    Unkown 
+   137426    197228     18566      4030 
+> table(umap_object@meta.data$celltype)
+
+            T_cells             B_cells    Epithelial_cells        Plasma_cells 
+             128337               65816               62145               58467 
+        Macrophages Smooth_muscle_cells          Mast_cells   Endothelial_cells 
+              15321               12171                7545                7448 
+> table(umap_object@meta.data$celltype, umap_object@meta.data$batch)
+                     
+                      GC01T GC02T GC02T-Tcell GC03P GC03T-R1 GC03T-R2 GC04P
+  T_cells              3175  2180        8766  5015     2318     2736  2916
+  B_cells               156   248          18   116     1267     1420   307
+  Epithelial_cells       39   355          52   170       63       80   392
+  Plasma_cells          152   495          27     0        1        0   622
+  Macrophages           322   151          30    25       41       37   131
+  Smooth_muscle_cells    45    38           6    26       11        6    99
+  Mast_cells              8    73           3    11       13       25    46
+  Endothelial_cells     133    20           1   175       17       22    46
+                     
+                      GC04T GC05P GC05T GC06P GC06T GC07P GC07T GC08P GC08T-S1
+  T_cells              3550  1994  2233  5392  2468   299  1741  1802     3338
+  B_cells               197  1253  1449  1104   984   175   172   203       75
+  Epithelial_cells      632   192   248  1175   485  1357  2697  1617     2280
+  Plasma_cells          410   218   235   658   383    68   228   130      489
+  Macrophages           179    21    36   283   913    27   326   191      253
+  Smooth_muscle_cells   398     0    11   290   135    26   438   350      180
+  Mast_cells             58    16    17   109   289    33   239   123      224
+  Endothelial_cells     159     0     0   249   475     1   259   141      119
+                     
+                      GC08T-S2 GC09P GC09T GC10P-R1 GC10P-R2 GC10T GC10T-Tcell
+  T_cells                 2070  2962  3686     6522     5786  3819        8164
+  B_cells                   12   466  1278     1604     1407   158           8
+  Epithelial_cells          53  1220   164     3426     3023  2051          58
+  Plasma_cells              75   814   668      199      189   217           3
+  Macrophages               58    85   164      542      407  1033          39
+  Smooth_muscle_cells       41   352    63      557      430   901          54
+  Mast_cells                13   124   235      717      630   140           2
+  Endothelial_cells         29   131    29      319      289   227          19
+                     
+                      Pat01-A Pat01-B Pat02-A Pat02-B Pat03-A Pat03-B Pat04-A
+  T_cells                 309     643     880    1386    1206    1801     561
+  B_cells                 273     331     381     728     185     347     932
+  Epithelial_cells        452     374    1007    1313     358     826     494
+  Plasma_cells            821    1186    2302    1212    1431     417     847
+  Macrophages              13      37      52     347     138     234      38
+  Smooth_muscle_cells      10      28      68     225      77     119      81
+  Mast_cells               80      74      67     128     100     460      39
+  Endothelial_cells         5      49      47     146      75      43     133
+                     
+                      Pat04-B Pat05-A Pat05-B Pat06-A Pat06-B Pat07-A Pat07-B
+  T_cells                 947     726    2369    1517    2206     621     878
+  B_cells                1149    1550    7167     900    1690     870    1300
+  Epithelial_cells        389    1016     453    2381     764     487     152
+  Plasma_cells           2366     554    1371    1453    1026    1900     466
+  Macrophages              98      54     112     173     188      70     153
+  Smooth_muscle_cells      86      96     286      94     147      26     280
+  Mast_cells              130      29      34     285     138      16      68
+  Endothelial_cells        80      58      61     135     135      33     118
+                     
+                      Pat08-A Pat08-B Pat09-A Pat09-B Pat10-A Pat10-B Pat11-A
+  T_cells                 176    1390     379    2307     194     148     413
+  B_cells                 101    1666     278     922     264     350     874
+  Epithelial_cells        106     300    1707     690      95     114     480
+  Plasma_cells            693     461     982    1069     729     290    2975
+  Macrophages              76     474      66     509      51      91      37
+  Smooth_muscle_cells     185     676      22     138     205     302      54
+  Mast_cells               26     623       6     315      53      41      52
+  Endothelial_cells       175     280      34     104      79     191      71
+                     
+                      Pat11-B Pat12-A Pat12-B Pat13-A Pat13-B Pat14-A Pat14-B
+  T_cells                 722     170     412     310     788     444    1964
+  B_cells                2213     197     929     368     725     437     222
+  Epithelial_cells        270     253     561     275     582     323     124
+  Plasma_cells           1603     245     701     842     629    1912     207
+  Macrophages             160      68     356     108     104      55    3851
+  Smooth_muscle_cells     134     481     827     547      86      47     514
+  Mast_cells               56      13      98     220     135       8      37
+  Endothelial_cells        77     242     278     245     162     142      61
+                     
+                      Pat15-A Pat15-B Pat16-A Pat16-B Pat17-A Pat17-B Pat18-A
+  T_cells                1637    1689     363     524     323     484     715
+  B_cells                 194     564     224     482      41      56    2192
+  Epithelial_cells       1133     752     732    1554     808    1117     951
+  Plasma_cells            227     202     419     292     174     305    1154
+  Macrophages              57     134     172     326      59     177      75
+  Smooth_muscle_cells      62      87      25      27      46      48      47
+  Mast_cells                9      27     102      69      36     132      48
+  Endothelial_cells        97      68       5      18      11      16      23
+                     
+                      Pat18-B Pat19-A Pat19-B Pat20-A Pat20-B Pat21-A Pat22-A
+  T_cells                 399     197     639    1107     628     314     835
+  B_cells                 408      97    2136    1887     924      31    1757
+  Epithelial_cells        587     190     502     279      65     324     844
+  Plasma_cells            134     319    1143    2020    1960     927    1074
+  Macrophages              56      12      43     121     273      47      79
+  Smooth_muscle_cells      25      15      58     195      24      57      92
+  Mast_cells               74       0      12      46      24      14     125
+  Endothelial_cells        26       4      31     113      21      20     102
+                     
+                      Pat22-B Pat23-A Pat23-B Pat24-A Pat24-B Pat25-A Pat26-A
+  T_cells                1265    1133    1348     845    1513     749    1034
+  B_cells                1837    2223    3210    1609     995     911    1219
+  Epithelial_cells        862     529     161     393     683    1837    5681
+  Plasma_cells            569    1021     923    1451     709    1179    1758
+  Macrophages             121      94      60      31     179      31      51
+  Smooth_muscle_cells      56      38      24      63     443      74      78
+  Mast_cells              151      44      14       4      18      68       9
+  Endothelial_cells       111      12       9      46     335      33      44
+                     
+                      Pat27-A Pat28-A Pat29-A
+  T_cells                 290     786     721
+  B_cells                  69     749     575
+  Epithelial_cells       1202    1733    1051
+  Plasma_cells            727    1523    1286
+  Macrophages              14      74      28
+  Smooth_muscle_cells     104      91      94
+  Mast_cells               11      13      16
+  Endothelial_cells        25     132      27
+> table(umap_object@meta.data$celltype, umap_object@meta.data$patient)
+                     
+                       GC01  GC02  GC03  GC04  GC05  GC06  GC07  GC08  GC09
+  T_cells              3175 10946 10069  6466  4227  7860  2040  7210  6648
+  B_cells               156   266  2803   504  2702  2088   347   290  1744
+  Epithelial_cells       39   407   313  1024   440  1660  4054  3950  1384
+  Plasma_cells          152   522     1  1032   453  1041   296   694  1482
+  Macrophages           322   181   103   310    57  1196   353   502   249
+  Smooth_muscle_cells    45    44    43   497    11   425   464   571   415
+  Mast_cells              8    76    49   104    33   398   272   360   359
+  Endothelial_cells     133    21   214   205     0   724   260   289   160
+                     
+                       GC10 patient1 patient10 patient11 patient12 patient13
+  T_cells             24291      952       342      1135       582      1098
+  B_cells              3177      604       614      3087      1126      1093
+  Epithelial_cells     8558      826       209       750       814       857
+  Plasma_cells          608     2007      1019      4578       946      1471
+  Macrophages          2021       50       142       197       424       212
+  Smooth_muscle_cells  1942       38       507       188      1308       633
+  Mast_cells           1489      154        94       108       111       355
+  Endothelial_cells     854       54       270       148       520       407
+                     
+                      patient14 patient15 patient16 patient17 patient18
+  T_cells                  2408      3326       887       807      1114
+  B_cells                   659       758       706        97      2600
+  Epithelial_cells          447      1885      2286      1925      1538
+  Plasma_cells             2119       429       711       479      1288
+  Macrophages              3906       191       498       236       131
+  Smooth_muscle_cells       561       149        52        94        72
+  Mast_cells                 45        36       171       168       122
+  Endothelial_cells         203       165        23        27        49
+                     
+                      patient19 patient2 patient20 patient21 patient22
+  T_cells                   836     2266      1735       314      2100
+  B_cells                  2233     1109      2811        31      3594
+  Epithelial_cells          692     2320       344       324      1706
+  Plasma_cells             1462     3514      3980       927      1643
+  Macrophages                55      399       394        47       200
+  Smooth_muscle_cells        73      293       219        57       148
+  Mast_cells                 12      195        70        14       276
+  Endothelial_cells          35      193       134        20       213
+                     
+                      patient23 patient24 patient25 patient26 patient27
+  T_cells                  2481      2358       749      1034       290
+  B_cells                  5433      2604       911      1219        69
+  Epithelial_cells          690      1076      1837      5681      1202
+  Plasma_cells             1944      2160      1179      1758       727
+  Macrophages               154       210        31        51        14
+  Smooth_muscle_cells        62       506        74        78       104
+  Mast_cells                 58        22        68         9        11
+  Endothelial_cells          21       381        33        44        25
+                     
+                      patient28 patient29 patient3 patient4 patient5 patient6
+  T_cells                   786       721     3007     1508     3095     3723
+  B_cells                   749       575      532     2081     8717     2590
+  Epithelial_cells         1733      1051     1184      883     1469     3145
+  Plasma_cells             1523      1286     1848     3213     1925     2479
+  Macrophages                74        28      372      136      166      361
+  Smooth_muscle_cells        91        94      196      167      382      241
+  Mast_cells                 13        16      560      169       63      423
+  Endothelial_cells         132        27      118      213      119      270
+                     
+                      patient7 patient8 patient9
+  T_cells                 1499     1566     2686
+  B_cells                 2170     1767     1200
+  Epithelial_cells         639      406     2397
+  Plasma_cells            2366     1154     2051
+  Macrophages              223      550      575
+  Smooth_muscle_cells      306      861      160
+  Mast_cells                84      649      321
+  Endothelial_cells        151      455      138
+> table(umap_object@meta.data$celltype, umap_object@meta.data$group)
+                     
+                      Non_Tumor Tumor
+  T_cells                 51643 76694
+  B_cells                 28023 37793
+  Epithelial_cells        39693 22452
+  Plasma_cells            35843 22624
+  Macrophages              3656 11665
+  Smooth_muscle_cells      5204  6967
+  Mast_cells               3348  4197
+  Endothelial_cells        3519  3929
+> table(umap_object@meta.data$celltype, umap_object@meta.data$tissue)
+                     
+                      Normal Paratumor Tumor
+  T_cells               3580     48063 76694
+  B_cells               3523     24500 37793
+  Epithelial_cells     11504     28189 22452
+  Plasma_cells          6473     29370 22624
+  Macrophages            198      3458 11665
+  Smooth_muscle_cells    441      4763  6967
+  Mast_cells             117      3231  4197
+  Endothelial_cells      261      3258  3929
+> table(umap_object@meta.data$celltype, umap_object@meta.data$Diagnosis)
+                     
+                        AGC CAG with IM   CSG   EGC
+  T_cells             92327        1470  2110 32430
+  B_cells             31405        1486  2037 30888
+  Epithelial_cells    26529        2888  8616 24112
+  Plasma_cells        26184        2465  4008 25810
+  Macrophages         10714          59   139  4409
+  Smooth_muscle_cells  7229         168   273  4501
+  Mast_cells           3447          84    33  3981
+  Endothelial_cells    4356          60   201  2831
+> table(umap_object@meta.data$celltype, umap_object@meta.data$Lauren)
+                     
+                      Diffuse Intestinal Mixed Non_Tumor
+  T_cells               48662      20342 55753      3580
+  B_cells               39516      14228  8549      3523
+  Epithelial_cells      20205      18584 11852     11504
+  Plasma_cells          33988      13757  4249      6473
+  Macrophages            9446       2537  3140       198
+  Smooth_muscle_cells    6217       2559  2954       441
+  Mast_cells             3235       2124  2069       117
+  Endothelial_cells      4191       1623  1373       261
+> table(umap_object@meta.data$celltype, umap_object@meta.data$H.pylori)
+                     
+                          -     + Equivocal Unkown
+  T_cells             58521 62031      4610   3175
+  B_cells             22151 40213      3296    156
+  Epithelial_cells    21792 34883      5431     39
+  Plasma_cells        20338 34787      3190    152
+  Macrophages          4287  9853       859    322
+  Smooth_muscle_cells  4211  7622       293     45
+  Mast_cells           2767  4176       594      8
+  Endothelial_cells    3359  3663       293    133
+> 
+> ### celltypeとgroupでgroup byして平均発現値を計算したseurat objectを作成
+> agg_group_umap_object <- AggregateExpression(umap_object, group.by = c("celltype", "group"), return.seurat = TRUE)
+Names of identity class contain underscores ('_'), replacing with dashes ('-')
+This message is displayed once every 8 hours.
+  |                                                                              |                                                                      |   0%  |                                                                              |====                                                                  |   6%  |                                                                              |=========                                                             |  12%  |                                                                              |=============                                                         |  19%  |                                                                              |==================                                                    |  25%  |                                                                              |======================                                                |  31%  |                                                                              |==========================                                            |  38%  |                                                                              |===============================                                       |  44%  |                                                                              |===================================                                   |  50%  |                                                                              |=======================================                               |  56%  |                                                                              |============================================                          |  62%  |                                                                              |================================================                      |  69%  |                                                                              |====================================================                  |  75%  |                                                                              |=========================================================             |  81%  |                                                                              |=============================================================         |  88%  |                                                                              |==================================================================    |  94%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |====                                                                  |   6%  |                                                                              |=========                                                             |  12%  |                                                                              |=============                                                         |  19%  |                                                                              |==================                                                    |  25%  |                                                                              |======================                                                |  31%  |                                                                              |==========================                                            |  38%  |                                                                              |===============================                                       |  44%  |                                                                              |===================================                                   |  50%  |                                                                              |=======================================                               |  56%  |                                                                              |============================================                          |  62%  |                                                                              |================================================                      |  69%  |                                                                              |====================================================                  |  75%  |                                                                              |=========================================================             |  81%  |                                                                              |=============================================================         |  88%  |                                                                              |==================================================================    |  94%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |==                                                                    |   3%  |                                                                              |=====                                                                 |   7%  |                                                                              |=======                                                               |  10%  |                                                                              |=========                                                             |  13%  |                                                                              |============                                                          |  17%  |                                                                              |==============                                                        |  20%  |                                                                              |================                                                      |  23%  |                                                                              |===================                                                   |  27%  |                                                                              |=====================                                                 |  30%  |                                                                              |=======================                                               |  33%  |                                                                              |==========================                                            |  37%  |                                                                              |============================                                          |  40%  |                                                                              |==============================                                        |  43%  |                                                                              |=================================                                     |  47%  |                                                                              |===================================                                   |  50%  |                                                                              |=====================================                                 |  53%  |                                                                              |========================================                              |  57%  |                                                                              |==========================================                            |  60%  |                                                                              |============================================                          |  63%  |                                                                              |===============================================                       |  67%  |                                                                              |=================================================                     |  70%  |                                                                              |===================================================                   |  73%  |                                                                              |======================================================                |  77%  |                                                                              |========================================================              |  80%  |                                                                              |==========================================================            |  83%  |                                                                              |=============================================================         |  87%  |                                                                              |===============================================================       |  90%  |                                                                              |=================================================================     |  93%  |                                                                              |====================================================================  |  97%  |                                                                              |======================================================================| 100%
+> saveRDS(agg_group_umap_object, "data/processed/agg_group_umap_object.rds")
+> 
+> ### celltypeとtissueでgroup byして平均発現値を計算したseurat objectを作成
+> agg_tissue_umap_object <- AggregateExpression(umap_object, group.by = c("celltype", "tissue"), return.seurat = TRUE)
+  |                                                                              |                                                                      |   0%  |                                                                              |===                                                                   |   4%  |                                                                              |======                                                                |   8%  |                                                                              |=========                                                             |  12%  |                                                                              |============                                                          |  17%  |                                                                              |===============                                                       |  21%  |                                                                              |==================                                                    |  25%  |                                                                              |====================                                                  |  29%  |                                                                              |=======================                                               |  33%  |                                                                              |==========================                                            |  38%  |                                                                              |=============================                                         |  42%  |                                                                              |================================                                      |  46%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================                                |  54%  |                                                                              |=========================================                             |  58%  |                                                                              |============================================                          |  62%  |                                                                              |===============================================                       |  67%  |                                                                              |==================================================                    |  71%  |                                                                              |====================================================                  |  75%  |                                                                              |=======================================================               |  79%  |                                                                              |==========================================================            |  83%  |                                                                              |=============================================================         |  88%  |                                                                              |================================================================      |  92%  |                                                                              |===================================================================   |  96%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===                                                                   |   4%  |                                                                              |======                                                                |   8%  |                                                                              |=========                                                             |  12%  |                                                                              |============                                                          |  17%  |                                                                              |===============                                                       |  21%  |                                                                              |==================                                                    |  25%  |                                                                              |====================                                                  |  29%  |                                                                              |=======================                                               |  33%  |                                                                              |==========================                                            |  38%  |                                                                              |=============================                                         |  42%  |                                                                              |================================                                      |  46%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================                                |  54%  |                                                                              |=========================================                             |  58%  |                                                                              |============================================                          |  62%  |                                                                              |===============================================                       |  67%  |                                                                              |==================================================                    |  71%  |                                                                              |====================================================                  |  75%  |                                                                              |=======================================================               |  79%  |                                                                              |==========================================================            |  83%  |                                                                              |=============================================================         |  88%  |                                                                              |================================================================      |  92%  |                                                                              |===================================================================   |  96%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |==                                                                    |   3%  |                                                                              |=====                                                                 |   7%  |                                                                              |=======                                                               |  10%  |                                                                              |=========                                                             |  13%  |                                                                              |============                                                          |  17%  |                                                                              |==============                                                        |  20%  |                                                                              |================                                                      |  23%  |                                                                              |===================                                                   |  27%  |                                                                              |=====================                                                 |  30%  |                                                                              |=======================                                               |  33%  |                                                                              |==========================                                            |  37%  |                                                                              |============================                                          |  40%  |                                                                              |==============================                                        |  43%  |                                                                              |=================================                                     |  47%  |                                                                              |===================================                                   |  50%  |                                                                              |=====================================                                 |  53%  |                                                                              |========================================                              |  57%  |                                                                              |==========================================                            |  60%  |                                                                              |============================================                          |  63%  |                                                                              |===============================================                       |  67%  |                                                                              |=================================================                     |  70%  |                                                                              |===================================================                   |  73%  |                                                                              |======================================================                |  77%  |                                                                              |========================================================              |  80%  |                                                                              |==========================================================            |  83%  |                                                                              |=============================================================         |  87%  |                                                                              |===============================================================       |  90%  |                                                                              |=================================================================     |  93%  |                                                                              |====================================================================  |  97%  |                                                                              |======================================================================| 100%
+> saveRDS(agg_tissue_umap_object, "data/processed/agg_tissue_umap_object.rds")
+> 
+> 
+> ### UMAP
+> # celltypeで色分け
+> DimPlot(
++     umap_object,
++     reduction = "umap_harmony",
++     group.by = "celltype",
++     label = TRUE,
++     pt.size = 0.5
++ )
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+> ggsave("output/plot/umap/umap_celltype.png", width = 10, height = 10)
+> 
+> # celltypeで色分け、groupでsplit
+> DimPlot(
++     umap_object,
++     reduction = "umap_harmony",
++     group.by = "celltype",
++     split.by = "group",
++     label = TRUE,
++     pt.size = 0.5
++ )
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+> ggsave("output/plot/umap/umap_celltype_group.png", width = 15, height = 10)
+> 
+> # celltypeで色分け、tissueでsplit
+> DimPlot(
++     umap_object,
++     reduction = "umap_harmony",
++     group.by = "celltype",
++     split.by = "tissue",
++     label = TRUE,
++     pt.size = 0.5
++ )
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+> ggsave("output/plot/umap/umap_celltype_tissue.png", width = 15, height = 10)
+> 
+> # celltypeで色分け、Diagnosisでsplit
+> DimPlot(
++     umap_object,
++     reduction = "umap_harmony",
++     group.by = "celltype",
++     split.by = "Diagnosis",
++     label = TRUE,
++     pt.size = 0.5
++ )
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+> ggsave("output/plot/umap/umap_celltype_diagnosis.png", width = 25, height = 10)
+> 
+> # celltypeで色分け、Laurenでsplit
+> DimPlot(
++     umap_object,
++     reduction = "umap_harmony",
++     group.by = "celltype",
++     split.by = "Lauren",
++     label = TRUE,
++     pt.size = 0.5
++ )
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+> ggsave("output/plot/umap/umap_celltype_lauren.png", width = 25, height = 10)
+> 
+> # celltypeで色分け、H.pyloriでsplit
+> DimPlot(
++     umap_object,
++     reduction = "umap_harmony",
++     group.by = "celltype",
++     split.by = "H.pylori",
++     label = TRUE,
++     pt.size = 0.5
++ )
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+> ggsave("output/plot/umap/umap_celltype_hpylori.png", width = 25, height = 10)
+> 
+> 
+> 
+> 
+> ### target geneに対するplot
+> tar_genes <- c("ARID5A", "ARID5B", "KRT13", "TGM2", "AXL")
+> 
+> 
+> ### Dotplot
+> # celltypeで分ける
+> DotPlot(
++     umap_object,
++     features = tar_genes,
++     group.by = "celltype"
++ ) + 
++ theme_classic() +
++ theme(
++         axis.text.x = element_text(size = 18),
++         axis.text.y = element_text(size = 12),
++         panel.background = element_rect(fill = "white"),
++         plot.background = element_rect(fill = "white", colour = "white"),
++         axis.title.x = element_blank(),
++         axis.title.y = element_blank()
++     )
+> ggsave("output/plot/dotplot/dotplot_target_genes_celltype.png", width = 10, height = 10)
+> 
+> # celltypeごとにgroupで分ける
+> DotPlot(
++     umap_object,
++     features = tar_genes,
++     group.by = "celltype",
++     split.by = "group",
++     cols = c("blue", "blue")
++ ) + 
++ theme_classic() +
++ theme(
++         axis.text.x = element_text(size = 18),
++         axis.text.y = element_text(size = 12),
++         panel.background = element_rect(fill = "white"),
++         plot.background = element_rect(fill = "white", colour = "white"),
++         axis.title.x = element_blank(),
++         axis.title.y = element_blank()
++     )
+> ggsave("output/plot/dotplot/dotplot_target_genes_celltype_group.png", width = 10, height = 10)
+> 
+> # celltypeごとにtissueで分ける
+> DotPlot(
++     umap_object,
++     features = tar_genes,
++     group.by = "celltype",
++     split.by = "tissue",
++     cols = c("blue", "blue", "blue")
++ ) +
++ theme_classic() +
++ theme(
++     axis.text.x = element_text(size = 18),
++     axis.text.y = element_text(size = 12),
++     panel.background = element_rect(fill = "white"),
++     plot.background = element_rect(fill = "white", colour = "white"),
++     axis.title.x = element_blank(),
++     axis.title.y = element_blank()
++ )
+> ggsave("output/plot/dotplot/dotplot_target_genes_celltype_tissue.png", width = 10, height = 10)
+> 
+> 
+> ### FeaturePlot, VlnPlot
+> # 関数を定義
+> plot_gene_expression <- function(gene) {
++     # 遺伝子がデータに存在するか確認
++     if (gene %in% rownames(umap_object@assays$SCT$data)) {
++         # FeaturePlot
++         FeaturePlot(
++             umap_object,
++             features = gene
++         )
++         ggsave(paste0("output/plot/feature/featureplot_", gene, ".png"), width = 15, height = 10)
++ 
++         # groupでsplit
++         FeaturePlot(
++             umap_object,
++             features = gene,
++             split.by = "group"
++         )
++         ggsave(paste0("output/plot/feature/featureplot_", gene, "_group.png"), width = 15, height = 10)
++ 
++         # tissueでsplit
++         FeaturePlot(
++             umap_object,
++             features = gene,
++             split.by = "tissue"
++         )
++         ggsave(paste0("output/plot/feature/featureplot_", gene, "_tissue.png"), width = 15, height = 10)
++ 
++         # Violin plot
++         VlnPlot(
++             umap_object,
++             features = gene
++         )
++         ggsave(paste0("output/plot/violin/violinplot_", gene, ".png"), width = 15, height = 10)
++ 
++         # groupでsplit
++         VlnPlot(
++             umap_object,
++             features = gene,
++             split.by = "group"
++         )
++         ggsave(paste0("output/plot/violin/violinplot_", gene, "_group.png"), width = 15, height = 10)
++ 
++         # tissueでsplit
++         VlnPlot(
++             umap_object,
++             features = gene,
++             split.by = "tissue"
++         )
++         ggsave(paste0("output/plot/violin/violinplot_", gene, "_tissue.png"), width = 15, height = 10)
++     } else {
++         warning(paste("遺伝子が見つかりません:", gene))
++     }
++ }
+> 
+> # tar_genesの各遺伝子についてplotを実行
+> for (gene in tar_genes) {
++     plot_gene_expression(gene)
++ }
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+The default behaviour of split.by has changed.
+Separate violin plots are now plotted side-by-side.
+To restore the old behaviour of a single split violin,
+set split.plot = TRUE.
+      
+This message will be shown once per session.
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+警告メッセージ:
+1: All cells have the same value (0) of “KRT13” 
+2: All cells have the same value (0) of “TGM2” 
+> 
+> 
+> ### Bar plot (平均発現値で)
+> # groupで分ける
+> for (gene in tar_genes) {
++     # agg_umap_objectから遺伝子のデータを抜き出し
++     if (gene %in% rownames(agg_group_umap_object@assays$SCT$data)) {
++         gene_data <- as.data.frame(agg_group_umap_object@assays$SCT$data[gene, , drop = FALSE]) %>%
++             rownames_to_column(var = "gene") %>%
++             pivot_longer(cols = -gene, names_to = "celltype_group", values_to = "value")
++ 
++         # celltypeとgroupを分割
++         long_data <- gene_data %>%
++             separate(celltype_group, into = c("celltype", "group"), sep = "_")
++ 
++         # Bar plotの作成
++         bar_plot <- ggplot(long_data, aes(x = celltype, y = value, fill = group)) +
++             geom_bar(stat = "identity", position = "dodge", color = "black") +  # 外枠を黒線に設定
++             scale_fill_manual(values = c("Non-Tumor" = "gray", "Tumor" = "red")) +
++             theme_classic() +
++             labs(title = paste0(gene, " Average Expression"), x = "Cell Type", y = "Average Expression") +
++             theme(axis.text.x = element_text(angle = 45, hjust = 1))
++         
++         ggsave(paste0("output/plot/barplot/barplot_", gene, "_celltype_group.png"), plot = bar_plot, width = 10, height = 10)
++     } else {
++         warning(paste("遺伝子が見つかりません:", gene))
++     }
++ }
+> 
+> # tissueで分ける
+> for (gene in tar_genes) {
++     # agg_tissue_umap_objectから遺伝子のデータを抜き出し
++     if (gene %in% rownames(agg_tissue_umap_object@assays$SCT$data)) {
++         gene_data <- as.data.frame(agg_tissue_umap_object@assays$SCT$data[gene, , drop = FALSE]) %>%
++             rownames_to_column(var = "gene") %>%
++             pivot_longer(cols = -gene, names_to = "celltype_tissue", values_to = "value")
++     
++         # celltypeとtissueを分割
++         long_data <- gene_data %>%
++             separate(celltype_tissue, into = c("celltype", "tissue"), sep = "_")
++     
++         # Bar plotの作成
++         bar_plot <- ggplot(long_data, aes(x = celltype, y = value, fill = tissue)) +
++             geom_bar(stat = "identity", position = "dodge", color = "black") +  # 外枠を黒線に設定
++             scale_fill_manual(values = c("Normal" = "gray", "Paratumor" = "darkgreen", "Tumor" = "red")) +
++             theme_classic() +
++             labs(title = paste0(gene, " Average Expression"), x = "Cell Type", y = "Average Expression") +
++             theme(axis.text.x = element_text(angle = 45, hjust = 1))
++     
++         ggsave(paste0("output/plot/barplot/barplot_", gene, "_celltype_tissue.png"), plot = bar_plot, width = 10, height = 10)
++     } else {
++         warning(paste("遺伝子が見つかりません:", gene))
++     }
++ }
+> 
+> proc.time()
+  ユーザ システム     経過 
+ 993.084   21.403 1016.158 

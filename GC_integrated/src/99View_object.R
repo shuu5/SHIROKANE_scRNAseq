@@ -1,0 +1,17 @@
+# 各meta.dataの情報を確認
+umap_object
+head(umap_object)
+names(umap_object@meta.data)
+table(umap_object@meta.data$batch)
+table(umap_object@meta.data$patient)
+table(umap_object@meta.data$tissue)
+table(umap_object@meta.data$Diagnosis)
+table(umap_object@meta.data$Lauren)
+table(umap_object@meta.data$H.pylori)
+table(umap_object@meta.data$cell_type)
+table(umap_object@meta.data$cell_type, umap_object@meta.data$batch)
+table(umap_object@meta.data$cell_type, umap_object@meta.data$patient)
+table(umap_object@meta.data$cell_type, umap_object@meta.data$tissue)
+table(umap_object@meta.data$cell_type, umap_object@meta.data$Diagnosis)
+table(umap_object@meta.data$cell_type, umap_object@meta.data$Lauren)
+table(umap_object@meta.data$cell_type, umap_object@meta.data$H.pylori)

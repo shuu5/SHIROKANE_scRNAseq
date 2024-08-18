@@ -1,0 +1,667 @@
+
+R version 4.4.0 (2024-04-24) -- "Puppy Cup"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R は、自由なソフトウェアであり、「完全に無保証」です。 
+一定の条件に従えば、自由にこれを再配布することができます。 
+配布条件の詳細に関しては、'license()' あるいは 'licence()' と入力してください。 
+
+R は多くの貢献者による共同プロジェクトです。 
+詳しくは 'contributors()' と入力してください。 
+また、R や R のパッケージを出版物で引用する際の形式については 
+'citation()' と入力してください。 
+
+'demo()' と入力すればデモをみることができます。 
+'help()' とすればオンラインヘルプが出ます。 
+'help.start()' で HTML ブラウザによるヘルプがみられます。 
+'q()' と入力すれば R を終了します。 
+
+> library(Seurat)
+要求されたパッケージ SeuratObject をロード中です
+要求されたパッケージ sp をロード中です
+
+次のパッケージを付け加えます: ‘SeuratObject’
+
+以下のオブジェクトは ‘package:base’ からマスクされています:
+
+    intersect, t
+
+> library(tidyverse)
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+> library(presto)
+要求されたパッケージ Rcpp をロード中です
+要求されたパッケージ data.table をロード中です
+
+次のパッケージを付け加えます: ‘data.table’
+
+以下のオブジェクトは ‘package:lubridate’ からマスクされています:
+
+    hour, isoweek, mday, minute, month, quarter, second, wday, week,
+    yday, year
+
+以下のオブジェクトは ‘package:dplyr’ からマスクされています:
+
+    between, first, last
+
+以下のオブジェクトは ‘package:purrr’ からマスクされています:
+
+    transpose
+
+> library(ggrepel)
+> 
+> # data/processed/subclusters/内のsubclusteringしたオブジェクトを読み込み
+> subclust_list <- lapply(list.files("data/processed/subclusters/", pattern = "*.rds", full.names = TRUE), readRDS)
+> names(subclust_list) <- gsub("data/processed/subclusters/(.*)_subclust.rds", "\\1", list.files("data/processed/subclusters/", pattern = "*.rds"))
+> names(subclust_list) <- gsub("_subclust.rds", "", names(subclust_list))
+> 
+> # 特に見たいgenes
+> tar_genes <- c("ARID5A", "ARID5B", "KRT13", "TGM2", "AXL", "MKI67")
+> 
+> # 各subclust_listのオブジェクトにtar_genesが含まれているか確認
+> lapply(names(subclust_list), function(cell_type) {
++   subset_obj <- subclust_list[[cell_type]]
++   missing_genes <- setdiff(tar_genes, rownames(subset_obj))
++   
++   if (length(missing_genes) > 0) {
++     print(paste(cell_type, "には以下の遺伝子が含まれていません:", paste(missing_genes, collapse = ", ")))
++   } else {
++     print(paste(cell_type, "にはすべてのtar_genesが含まれています。"))
++   }
++ })
+[1] "B_cells には以下の遺伝子が含まれていません: KRT13"
+[1] "Endothelial_cells には以下の遺伝子が含まれていません: KRT13"
+[1] "Epithelial_cells にはすべてのtar_genesが含まれています。"
+[1] "Macrophages には以下の遺伝子が含まれていません: KRT13"
+[1] "Mast_cells には以下の遺伝子が含まれていません: KRT13, TGM2"
+[1] "Plasma_cells には以下の遺伝子が含まれていません: KRT13"
+[1] "Smooth_muscle_cells には以下の遺伝子が含まれていません: KRT13"
+[1] "T_cells にはすべてのtar_genesが含まれています。"
+[1] "Treg_cells には以下の遺伝子が含まれていません: KRT13, TGM2, AXL, MKI67"
+[[1]]
+[1] "B_cells には以下の遺伝子が含まれていません: KRT13"
+
+[[2]]
+[1] "Endothelial_cells には以下の遺伝子が含まれていません: KRT13"
+
+[[3]]
+[1] "Epithelial_cells にはすべてのtar_genesが含まれています。"
+
+[[4]]
+[1] "Macrophages には以下の遺伝子が含まれていません: KRT13"
+
+[[5]]
+[1] "Mast_cells には以下の遺伝子が含まれていません: KRT13, TGM2"
+
+[[6]]
+[1] "Plasma_cells には以下の遺伝子が含まれていません: KRT13"
+
+[[7]]
+[1] "Smooth_muscle_cells には以下の遺伝子が含まれていません: KRT13"
+
+[[8]]
+[1] "T_cells にはすべてのtar_genesが含まれています。"
+
+[[9]]
+[1] "Treg_cells には以下の遺伝子が含まれていません: KRT13, TGM2, AXL, MKI67"
+
+> 
+> 
+> 
+> ### subclust_listの各オブジェクトのgroup間の発現差をpseudo-bulkで計算しplotとcsvで保存
+> for (i in seq_along(subclust_list)) {
++     subclust <- subclust_list[[i]]
++     
++     # 各サブクラスタの平均発現値を計算
++     agg_subclust <- AggregateExpression(subclust, group.by = c("group"), return.seurat = TRUE)
++ 
++     # 発言の差を計算
++     expression_diff <- agg_subclust@assays$SCT$data[, paste0("Tumor")] - agg_subclust@assays$SCT$data[, paste0("Non-Tumor")]
++ 
++     # 発言の差が大きいものを上位10個
++     top_positive_genes <- head(rownames(agg_subclust)[order(expression_diff, decreasing = TRUE)], 10)
++     # 発言の差が小さいものを上位10個
++     top_negative_genes <- head(rownames(agg_subclust)[order(expression_diff)], 10)
++ 
++ 
++     # 散布図を作成
++     p1 <- ggplot(
++         data = as.data.frame(agg_subclust@assays$SCT$data), 
++         aes(x = agg_subclust@assays$SCT$data[, "Non-Tumor"], y = agg_subclust@assays$SCT$data[, "Tumor"]) 
++     ) +
++           geom_point(aes(color = ifelse(rownames(agg_subclust) %in% top_positive_genes, "red", 
++                                          ifelse(rownames(agg_subclust) %in% top_negative_genes, "blue", "grey"))), 
++                      size = 1) +
++           labs(x = "Non-Tumor", y = "Tumor") +
++           scale_color_identity() +  # 色をそのまま使用
++           theme_classic()
++ 
++     # 赤い点（差が大きい方）と青い点（差が小さい方）をラベル付け
++     p2 <- p1 + 
++           ggrepel::geom_text_repel(data = subset(as.data.frame(agg_subclust@assays$SCT$data), 
++                                                   rownames(agg_subclust) %in% top_positive_genes), 
++                                 aes(x = agg_subclust@assays$SCT$data[rownames(agg_subclust) %in% top_positive_genes, "Non-Tumor"],
++                                     y = agg_subclust@assays$SCT$data[rownames(agg_subclust) %in% top_positive_genes, "Tumor"],
++                                     label = rownames(agg_subclust)[rownames(agg_subclust) %in% top_positive_genes]), 
++                                 color = "red", 
++                                 size = 3, 
++                                 nudge_x = 0, 
++                                 nudge_y = 0)
++ 
++     p3 <- p2 + 
++           ggrepel::geom_text_repel(data = subset(as.data.frame(agg_subclust@assays$SCT$data), 
++                                                   rownames(agg_subclust) %in% top_negative_genes), 
++                                 aes(x = agg_subclust@assays$SCT$data[rownames(agg_subclust) %in% top_negative_genes, "Non-Tumor"],
++                                     y = agg_subclust@assays$SCT$data[rownames(agg_subclust) %in% top_negative_genes, "Tumor"],
++                                     label = rownames(agg_subclust)[rownames(agg_subclust) %in% top_negative_genes]), 
++                                 color = "blue", 
++                                 size = 3, 
++                                 nudge_x = 0, 
++                                 nudge_y = 0)
++ 
++     # プロットを保存
++     ggsave(
++         paste0("output/plot/scatter/pseudobulk/", names(subclust_list)[i], ".png"), 
++         plot = p3, width = 10, height = 10, dpi = 300
++     )
++ 
++     # top_positive_genesとtop_negative_genesをcsvに保存
++     write.csv(top_positive_genes, paste0("output/csv/pseudobulk/", names(subclust_list)[i], "_top_positive_genes.csv"), row.names = FALSE)
++     write.csv(top_negative_genes, paste0("output/csv/pseudobulk/", names(subclust_list)[i], "_top_negative_genes.csv"), row.names = FALSE)
++ 
++     # 各Positive遺伝子のフィーチャープロット（groupで分割）
++     for (gene in top_positive_genes) {
++         print(paste("Positive Gene:", gene, "feature plot"))
++         p_positive <- FeaturePlot(subclust, features = gene, 
++                                    cols = c("grey", "red"), 
++                                    ncol = 1, 
++                                    split.by = "group") + 
++                       theme_classic() + 
++                       ggtitle(paste("Positive Gene:", gene))
++ 
++         # プロットを保存
++         ggsave(
++             paste0("output/plot/feature/pseudobulk/", names(subclust_list)[i], "_positive_", gene, ".png"), 
++             plot = p_positive, width = 15, height = 10, dpi = 300
++         )
++     }
++ 
++     # 各Negative遺伝子のフィーチャープロット（groupで分割）
++     for (gene in top_negative_genes) {
++         print(paste("Negative Gene:", gene, "feature plot"))
++         p_negative <- FeaturePlot(subclust, features = gene, 
++                                    cols = c("grey", "blue"), 
++                                    ncol = 1, 
++                                    split.by = "group") + 
++                       theme_classic() + 
++                       ggtitle(paste("Negative Gene:", gene))
++ 
++         # プロットを保存
++         ggsave(
++             paste0("output/plot/feature/pseudobulk/", names(subclust_list)[i], "_negative_", gene, ".png"), 
++             plot = p_negative, width = 15, height = 10, dpi = 300
++         )
++     }
++ 
++     # 各Positive遺伝子のバイオリンプロット（groupで分割）
++     for (gene in top_positive_genes) {
++         print(paste("Positive Gene:", gene, "violin plot"))
++         v_positive <- VlnPlot(subclust, features = gene, 
++                               split.by = "group",
++                               cols = c("grey", "red"), 
++                               ncol = 1) + 
++                       theme_classic() + 
++                       ggtitle(paste("Positive Gene Vln Plot:", gene))
++ 
++         # プロットを保存
++         ggsave(
++             paste0("output/plot/violin/pseudobulk/", names(subclust_list)[i], "_positive_", gene, ".png"), 
++             plot = v_positive, width = 10, height = 10, dpi = 300
++         )
++     }
++ 
++     # 各Negative遺伝子のバイオリンプロット（groupで分割）
++     for (gene in top_negative_genes) {
++         print(paste("Negative Gene:", gene, "violin plot"))
++         v_negative <- VlnPlot(subclust, features = gene, 
++                               split.by = "group",
++                               cols = c("grey", "blue"), 
++                               ncol = 1) + 
++                       theme_classic() + 
++                       ggtitle(paste("Negative Gene Vln Plot:", gene))
++ 
++         # プロットを保存
++         ggsave(
++             paste0("output/plot/violin/pseudobulk/", names(subclust_list)[i], "_negative_", gene, ".png"), 
++             plot = v_negative, width = 10, height = 10, dpi = 300
++         )
++     }
++ }
+Names of identity class contain underscores ('_'), replacing with dashes ('-')
+This message is displayed once every 8 hours.
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |====                                                                  |   5%  |                                                                              |=======                                                               |  11%  |                                                                              |===========                                                           |  16%  |                                                                              |===============                                                       |  21%  |                                                                              |==================                                                    |  26%  |                                                                              |======================                                                |  32%  |                                                                              |==========================                                            |  37%  |                                                                              |=============================                                         |  42%  |                                                                              |=================================                                     |  47%  |                                                                              |=====================================                                 |  53%  |                                                                              |=========================================                             |  58%  |                                                                              |============================================                          |  63%  |                                                                              |================================================                      |  68%  |                                                                              |====================================================                  |  74%  |                                                                              |=======================================================               |  79%  |                                                                              |===========================================================           |  84%  |                                                                              |===============================================================       |  89%  |                                                                              |==================================================================    |  95%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: MT2A feature plot"
+[1] "Positive Gene: MT1X feature plot"
+[1] "Positive Gene: IL8 feature plot"
+[1] "Positive Gene: HBB feature plot"
+[1] "Positive Gene: HSPA1B feature plot"
+[1] "Positive Gene: IGHM feature plot"
+[1] "Positive Gene: HSPA1A feature plot"
+[1] "Positive Gene: REG4 feature plot"
+[1] "Positive Gene: CCL3 feature plot"
+[1] "Positive Gene: S1PR1 feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: PGA3 feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: GAST feature plot"
+[1] "Negative Gene: RGCC feature plot"
+[1] "Negative Gene: LMNA feature plot"
+[1] "Negative Gene: REG3A feature plot"
+[1] "Negative Gene: IGJ feature plot"
+[1] "Negative Gene: ADGRE5 feature plot"
+[1] "Negative Gene: LYZ feature plot"
+[1] "Positive Gene: MT2A violin plot"
+The default behaviour of split.by has changed.
+Separate violin plots are now plotted side-by-side.
+To restore the old behaviour of a single split violin,
+set split.plot = TRUE.
+      
+This message will be shown once per session.
+[1] "Positive Gene: MT1X violin plot"
+[1] "Positive Gene: IL8 violin plot"
+[1] "Positive Gene: HBB violin plot"
+[1] "Positive Gene: HSPA1B violin plot"
+[1] "Positive Gene: IGHM violin plot"
+[1] "Positive Gene: HSPA1A violin plot"
+[1] "Positive Gene: REG4 violin plot"
+[1] "Positive Gene: CCL3 violin plot"
+[1] "Positive Gene: S1PR1 violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: PGA3 violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: GAST violin plot"
+[1] "Negative Gene: RGCC violin plot"
+[1] "Negative Gene: LMNA violin plot"
+[1] "Negative Gene: REG3A violin plot"
+[1] "Negative Gene: IGJ violin plot"
+[1] "Negative Gene: ADGRE5 violin plot"
+[1] "Negative Gene: LYZ violin plot"
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |====                                                                  |   6%  |                                                                              |========                                                              |  11%  |                                                                              |============                                                          |  17%  |                                                                              |================                                                      |  22%  |                                                                              |===================                                                   |  28%  |                                                                              |=======================                                               |  33%  |                                                                              |===========================                                           |  39%  |                                                                              |===============================                                       |  44%  |                                                                              |===================================                                   |  50%  |                                                                              |=======================================                               |  56%  |                                                                              |===========================================                           |  61%  |                                                                              |===============================================                       |  67%  |                                                                              |===================================================                   |  72%  |                                                                              |======================================================                |  78%  |                                                                              |==========================================================            |  83%  |                                                                              |==============================================================        |  89%  |                                                                              |==================================================================    |  94%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: COL6A2 feature plot"
+[1] "Positive Gene: SERPINE1 feature plot"
+[1] "Positive Gene: MMP2 feature plot"
+[1] "Positive Gene: THBS1 feature plot"
+[1] "Positive Gene: COL4A1 feature plot"
+[1] "Positive Gene: SPP1 feature plot"
+[1] "Positive Gene: COL4A2 feature plot"
+[1] "Positive Gene: BGN feature plot"
+[1] "Positive Gene: IGFBP5 feature plot"
+[1] "Positive Gene: LGALS1 feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: CA4 feature plot"
+[1] "Negative Gene: PGA3 feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: CD36 feature plot"
+[1] "Negative Gene: LIFR feature plot"
+[1] "Negative Gene: TXNIP feature plot"
+[1] "Negative Gene: RBP7 feature plot"
+[1] "Negative Gene: CD320 feature plot"
+[1] "Negative Gene: FABP5 feature plot"
+[1] "Positive Gene: COL6A2 violin plot"
+[1] "Positive Gene: SERPINE1 violin plot"
+[1] "Positive Gene: MMP2 violin plot"
+[1] "Positive Gene: THBS1 violin plot"
+[1] "Positive Gene: COL4A1 violin plot"
+[1] "Positive Gene: SPP1 violin plot"
+[1] "Positive Gene: COL4A2 violin plot"
+[1] "Positive Gene: BGN violin plot"
+[1] "Positive Gene: IGFBP5 violin plot"
+[1] "Positive Gene: LGALS1 violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: CA4 violin plot"
+[1] "Negative Gene: PGA3 violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: CD36 violin plot"
+[1] "Negative Gene: LIFR violin plot"
+[1] "Negative Gene: TXNIP violin plot"
+[1] "Negative Gene: RBP7 violin plot"
+[1] "Negative Gene: CD320 violin plot"
+[1] "Negative Gene: FABP5 violin plot"
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |===                                                                   |   4%  |                                                                              |=====                                                                 |   8%  |                                                                              |========                                                              |  12%  |                                                                              |===========                                                           |  15%  |                                                                              |=============                                                         |  19%  |                                                                              |================                                                      |  23%  |                                                                              |===================                                                   |  27%  |                                                                              |======================                                                |  31%  |                                                                              |========================                                              |  35%  |                                                                              |===========================                                           |  38%  |                                                                              |==============================                                        |  42%  |                                                                              |================================                                      |  46%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================                                |  54%  |                                                                              |========================================                              |  58%  |                                                                              |===========================================                           |  62%  |                                                                              |==============================================                        |  65%  |                                                                              |================================================                      |  69%  |                                                                              |===================================================                   |  73%  |                                                                              |======================================================                |  77%  |                                                                              |=========================================================             |  81%  |                                                                              |===========================================================           |  85%  |                                                                              |==============================================================        |  88%  |                                                                              |=================================================================     |  92%  |                                                                              |===================================================================   |  96%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: PRSS1 feature plot"
+[1] "Positive Gene: REG4 feature plot"
+[1] "Positive Gene: PRSS3 feature plot"
+[1] "Positive Gene: TFF3 feature plot"
+[1] "Positive Gene: GCG feature plot"
+[1] "Positive Gene: KRT7 feature plot"
+[1] "Positive Gene: CRIP1 feature plot"
+[1] "Positive Gene: CLDN3 feature plot"
+[1] "Positive Gene: OLFM4 feature plot"
+[1] "Positive Gene: DEFA5 feature plot"
+[1] "Negative Gene: GAST feature plot"
+[1] "Negative Gene: LTF feature plot"
+[1] "Negative Gene: PGA3 feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: REG3A feature plot"
+[1] "Negative Gene: CLU feature plot"
+[1] "Negative Gene: GIF feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: KCNE2 feature plot"
+[1] "Negative Gene: ATP4B feature plot"
+[1] "Positive Gene: PRSS1 violin plot"
+[1] "Positive Gene: REG4 violin plot"
+[1] "Positive Gene: PRSS3 violin plot"
+[1] "Positive Gene: TFF3 violin plot"
+[1] "Positive Gene: GCG violin plot"
+[1] "Positive Gene: KRT7 violin plot"
+[1] "Positive Gene: CRIP1 violin plot"
+[1] "Positive Gene: CLDN3 violin plot"
+[1] "Positive Gene: OLFM4 violin plot"
+[1] "Positive Gene: DEFA5 violin plot"
+[1] "Negative Gene: GAST violin plot"
+[1] "Negative Gene: LTF violin plot"
+[1] "Negative Gene: PGA3 violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: REG3A violin plot"
+[1] "Negative Gene: CLU violin plot"
+[1] "Negative Gene: GIF violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: KCNE2 violin plot"
+[1] "Negative Gene: ATP4B violin plot"
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |====                                                                  |   5%  |                                                                              |=======                                                               |  11%  |                                                                              |===========                                                           |  16%  |                                                                              |===============                                                       |  21%  |                                                                              |==================                                                    |  26%  |                                                                              |======================                                                |  32%  |                                                                              |==========================                                            |  37%  |                                                                              |=============================                                         |  42%  |                                                                              |=================================                                     |  47%  |                                                                              |=====================================                                 |  53%  |                                                                              |=========================================                             |  58%  |                                                                              |============================================                          |  63%  |                                                                              |================================================                      |  68%  |                                                                              |====================================================                  |  74%  |                                                                              |=======================================================               |  79%  |                                                                              |===========================================================           |  84%  |                                                                              |===============================================================       |  89%  |                                                                              |==================================================================    |  95%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: HBB feature plot"
+[1] "Positive Gene: SPP1 feature plot"
+[1] "Positive Gene: HBA2 feature plot"
+[1] "Positive Gene: CXCL5 feature plot"
+[1] "Positive Gene: MMP1 feature plot"
+[1] "Positive Gene: HBA1 feature plot"
+[1] "Positive Gene: CCL20 feature plot"
+[1] "Positive Gene: IL8 feature plot"
+[1] "Positive Gene: CXCL1 feature plot"
+[1] "Positive Gene: CXCL3 feature plot"
+[1] "Negative Gene: PGA3 feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: REG3A feature plot"
+[1] "Negative Gene: IGJ feature plot"
+[1] "Negative Gene: SEPP1 feature plot"
+[1] "Negative Gene: ATP2B1-AS1 feature plot"
+[1] "Negative Gene: IGLL5 feature plot"
+[1] "Negative Gene: FOS feature plot"
+[1] "Negative Gene: KLF2 feature plot"
+[1] "Positive Gene: HBB violin plot"
+[1] "Positive Gene: SPP1 violin plot"
+[1] "Positive Gene: HBA2 violin plot"
+[1] "Positive Gene: CXCL5 violin plot"
+[1] "Positive Gene: MMP1 violin plot"
+[1] "Positive Gene: HBA1 violin plot"
+[1] "Positive Gene: CCL20 violin plot"
+[1] "Positive Gene: IL8 violin plot"
+[1] "Positive Gene: CXCL1 violin plot"
+[1] "Positive Gene: CXCL3 violin plot"
+[1] "Negative Gene: PGA3 violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: REG3A violin plot"
+[1] "Negative Gene: IGJ violin plot"
+[1] "Negative Gene: SEPP1 violin plot"
+[1] "Negative Gene: ATP2B1-AS1 violin plot"
+[1] "Negative Gene: IGLL5 violin plot"
+[1] "Negative Gene: FOS violin plot"
+[1] "Negative Gene: KLF2 violin plot"
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |=====                                                                 |   7%  |                                                                              |=========                                                             |  13%  |                                                                              |==============                                                        |  20%  |                                                                              |===================                                                   |  27%  |                                                                              |=======================                                               |  33%  |                                                                              |============================                                          |  40%  |                                                                              |=================================                                     |  47%  |                                                                              |=====================================                                 |  53%  |                                                                              |==========================================                            |  60%  |                                                                              |===============================================                       |  67%  |                                                                              |===================================================                   |  73%  |                                                                              |========================================================              |  80%  |                                                                              |=============================================================         |  87%  |                                                                              |=================================================================     |  93%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: MT2A feature plot"
+[1] "Positive Gene: IL5 feature plot"
+[1] "Positive Gene: APOC1 feature plot"
+[1] "Positive Gene: CD52 feature plot"
+[1] "Positive Gene: RGS16 feature plot"
+[1] "Positive Gene: MT1X feature plot"
+[1] "Positive Gene: ATP5E feature plot"
+[1] "Positive Gene: APOE feature plot"
+[1] "Positive Gene: SELK feature plot"
+[1] "Positive Gene: TMSB4X feature plot"
+[1] "Negative Gene: PGA3 feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: AC020916.1 feature plot"
+[1] "Negative Gene: CSF1 feature plot"
+[1] "Negative Gene: RBKS feature plot"
+[1] "Negative Gene: DUSP2 feature plot"
+[1] "Negative Gene: HBB feature plot"
+[1] "Negative Gene: RPS4Y1 feature plot"
+[1] "Negative Gene: CST7 feature plot"
+[1] "Positive Gene: MT2A violin plot"
+[1] "Positive Gene: IL5 violin plot"
+[1] "Positive Gene: APOC1 violin plot"
+[1] "Positive Gene: CD52 violin plot"
+[1] "Positive Gene: RGS16 violin plot"
+[1] "Positive Gene: MT1X violin plot"
+[1] "Positive Gene: ATP5E violin plot"
+[1] "Positive Gene: APOE violin plot"
+[1] "Positive Gene: SELK violin plot"
+[1] "Positive Gene: TMSB4X violin plot"
+[1] "Negative Gene: PGA3 violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: AC020916.1 violin plot"
+[1] "Negative Gene: CSF1 violin plot"
+[1] "Negative Gene: RBKS violin plot"
+[1] "Negative Gene: DUSP2 violin plot"
+[1] "Negative Gene: HBB violin plot"
+[1] "Negative Gene: RPS4Y1 violin plot"
+[1] "Negative Gene: CST7 violin plot"
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |====                                                                  |   5%  |                                                                              |=======                                                               |  10%  |                                                                              |==========                                                            |  15%  |                                                                              |==============                                                        |  20%  |                                                                              |==================                                                    |  25%  |                                                                              |=====================                                                 |  30%  |                                                                              |========================                                              |  35%  |                                                                              |============================                                          |  40%  |                                                                              |================================                                      |  45%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================                                |  55%  |                                                                              |==========================================                            |  60%  |                                                                              |==============================================                        |  65%  |                                                                              |=================================================                     |  70%  |                                                                              |====================================================                  |  75%  |                                                                              |========================================================              |  80%  |                                                                              |============================================================          |  85%  |                                                                              |===============================================================       |  90%  |                                                                              |==================================================================    |  95%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: IGHG1 feature plot"
+[1] "Positive Gene: IL8 feature plot"
+[1] "Positive Gene: JCHAIN feature plot"
+[1] "Positive Gene: IGKC feature plot"
+[1] "Positive Gene: REG4 feature plot"
+[1] "Positive Gene: RACK1 feature plot"
+[1] "Positive Gene: CXCR4 feature plot"
+[1] "Positive Gene: IGLC2 feature plot"
+[1] "Positive Gene: MT-ATP8 feature plot"
+[1] "Positive Gene: SELENOK feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: GAST feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: LYZ feature plot"
+[1] "Negative Gene: REG3A feature plot"
+[1] "Negative Gene: LTF feature plot"
+[1] "Negative Gene: PSCA feature plot"
+[1] "Negative Gene: APOA1 feature plot"
+[1] "Negative Gene: GKN1 feature plot"
+[1] "Negative Gene: PHGR1 feature plot"
+[1] "Positive Gene: IGHG1 violin plot"
+[1] "Positive Gene: IL8 violin plot"
+[1] "Positive Gene: JCHAIN violin plot"
+[1] "Positive Gene: IGKC violin plot"
+[1] "Positive Gene: REG4 violin plot"
+[1] "Positive Gene: RACK1 violin plot"
+[1] "Positive Gene: CXCR4 violin plot"
+[1] "Positive Gene: IGLC2 violin plot"
+[1] "Positive Gene: MT-ATP8 violin plot"
+[1] "Positive Gene: SELENOK violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: GAST violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: LYZ violin plot"
+[1] "Negative Gene: REG3A violin plot"
+[1] "Negative Gene: LTF violin plot"
+[1] "Negative Gene: PSCA violin plot"
+[1] "Negative Gene: APOA1 violin plot"
+[1] "Negative Gene: GKN1 violin plot"
+[1] "Negative Gene: PHGR1 violin plot"
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |====                                                                  |   5%  |                                                                              |=======                                                               |  10%  |                                                                              |==========                                                            |  15%  |                                                                              |==============                                                        |  20%  |                                                                              |==================                                                    |  25%  |                                                                              |=====================                                                 |  30%  |                                                                              |========================                                              |  35%  |                                                                              |============================                                          |  40%  |                                                                              |================================                                      |  45%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================                                |  55%  |                                                                              |==========================================                            |  60%  |                                                                              |==============================================                        |  65%  |                                                                              |=================================================                     |  70%  |                                                                              |====================================================                  |  75%  |                                                                              |========================================================              |  80%  |                                                                              |============================================================          |  85%  |                                                                              |===============================================================       |  90%  |                                                                              |==================================================================    |  95%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: IL8 feature plot"
+[1] "Positive Gene: COL4A1 feature plot"
+[1] "Positive Gene: LINC00152 feature plot"
+[1] "Positive Gene: THY1 feature plot"
+[1] "Positive Gene: MMP1 feature plot"
+[1] "Positive Gene: MMP3 feature plot"
+[1] "Positive Gene: CST1 feature plot"
+[1] "Positive Gene: BGN feature plot"
+[1] "Positive Gene: NDUFA4L2 feature plot"
+[1] "Positive Gene: CHN1 feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: APOE feature plot"
+[1] "Negative Gene: PGA3 feature plot"
+[1] "Negative Gene: DPT feature plot"
+[1] "Negative Gene: ABCA8 feature plot"
+[1] "Negative Gene: POSTN feature plot"
+[1] "Negative Gene: CXCL14 feature plot"
+[1] "Negative Gene: CFD feature plot"
+[1] "Negative Gene: APOD feature plot"
+[1] "Positive Gene: IL8 violin plot"
+[1] "Positive Gene: COL4A1 violin plot"
+[1] "Positive Gene: LINC00152 violin plot"
+[1] "Positive Gene: THY1 violin plot"
+[1] "Positive Gene: MMP1 violin plot"
+[1] "Positive Gene: MMP3 violin plot"
+[1] "Positive Gene: CST1 violin plot"
+[1] "Positive Gene: BGN violin plot"
+[1] "Positive Gene: NDUFA4L2 violin plot"
+[1] "Positive Gene: CHN1 violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: APOE violin plot"
+[1] "Negative Gene: PGA3 violin plot"
+[1] "Negative Gene: DPT violin plot"
+[1] "Negative Gene: ABCA8 violin plot"
+[1] "Negative Gene: POSTN violin plot"
+[1] "Negative Gene: CXCL14 violin plot"
+[1] "Negative Gene: CFD violin plot"
+[1] "Negative Gene: APOD violin plot"
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |===                                                                   |   5%  |                                                                              |======                                                                |   9%  |                                                                              |==========                                                            |  14%  |                                                                              |=============                                                         |  18%  |                                                                              |================                                                      |  23%  |                                                                              |===================                                                   |  27%  |                                                                              |======================                                                |  32%  |                                                                              |=========================                                             |  36%  |                                                                              |=============================                                         |  41%  |                                                                              |================================                                      |  45%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================                                |  55%  |                                                                              |=========================================                             |  59%  |                                                                              |=============================================                         |  64%  |                                                                              |================================================                      |  68%  |                                                                              |===================================================                   |  73%  |                                                                              |======================================================                |  77%  |                                                                              |=========================================================             |  82%  |                                                                              |============================================================          |  86%  |                                                                              |================================================================      |  91%  |                                                                              |===================================================================   |  95%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: MT2A feature plot"
+[1] "Positive Gene: FOXP3 feature plot"
+[1] "Positive Gene: DUSP4 feature plot"
+[1] "Positive Gene: HSPA6 feature plot"
+[1] "Positive Gene: TNFRSF18 feature plot"
+[1] "Positive Gene: BAG3 feature plot"
+[1] "Positive Gene: HBB feature plot"
+[1] "Positive Gene: BATF feature plot"
+[1] "Positive Gene: CTLA4 feature plot"
+[1] "Positive Gene: HBA2 feature plot"
+[1] "Negative Gene: PGA3 feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: IGJ feature plot"
+[1] "Negative Gene: LYZ feature plot"
+[1] "Negative Gene: FOS feature plot"
+[1] "Negative Gene: TRBV7-9 feature plot"
+[1] "Negative Gene: CD69 feature plot"
+[1] "Negative Gene: IL17A feature plot"
+[1] "Negative Gene: XCL1 feature plot"
+[1] "Positive Gene: MT2A violin plot"
+[1] "Positive Gene: FOXP3 violin plot"
+[1] "Positive Gene: DUSP4 violin plot"
+[1] "Positive Gene: HSPA6 violin plot"
+[1] "Positive Gene: TNFRSF18 violin plot"
+[1] "Positive Gene: BAG3 violin plot"
+[1] "Positive Gene: HBB violin plot"
+[1] "Positive Gene: BATF violin plot"
+[1] "Positive Gene: CTLA4 violin plot"
+[1] "Positive Gene: HBA2 violin plot"
+[1] "Negative Gene: PGA3 violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: IGJ violin plot"
+[1] "Negative Gene: LYZ violin plot"
+[1] "Negative Gene: FOS violin plot"
+[1] "Negative Gene: TRBV7-9 violin plot"
+[1] "Negative Gene: CD69 violin plot"
+[1] "Negative Gene: IL17A violin plot"
+[1] "Negative Gene: XCL1 violin plot"
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+  |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%
+Centering and scaling data matrix
+  |                                                                              |                                                                      |   0%  |                                                                              |========                                                              |  11%  |                                                                              |================                                                      |  22%  |                                                                              |=======================                                               |  33%  |                                                                              |===============================                                       |  44%  |                                                                              |=======================================                               |  56%  |                                                                              |===============================================                       |  67%  |                                                                              |======================================================                |  78%  |                                                                              |==============================================================        |  89%  |                                                                              |======================================================================| 100%
+[1] "Positive Gene: CCR4 feature plot"
+[1] "Positive Gene: MKLN1 feature plot"
+[1] "Positive Gene: TBC1D5 feature plot"
+[1] "Positive Gene: AQR feature plot"
+[1] "Positive Gene: TPP1 feature plot"
+[1] "Positive Gene: DICER1 feature plot"
+[1] "Positive Gene: CD79A feature plot"
+[1] "Positive Gene: TMOD3 feature plot"
+[1] "Positive Gene: QRICH1 feature plot"
+[1] "Positive Gene: STAM feature plot"
+[1] "Negative Gene: PGA3 feature plot"
+[1] "Negative Gene: LIPF feature plot"
+[1] "Negative Gene: PGC feature plot"
+[1] "Negative Gene: HSPA1A feature plot"
+[1] "Negative Gene: PTCH2 feature plot"
+[1] "Negative Gene: ZNF821 feature plot"
+[1] "Negative Gene: SNHG9 feature plot"
+[1] "Negative Gene: JUND feature plot"
+[1] "Negative Gene: SERTAD1 feature plot"
+[1] "Negative Gene: NFKBIZ feature plot"
+[1] "Positive Gene: CCR4 violin plot"
+[1] "Positive Gene: MKLN1 violin plot"
+[1] "Positive Gene: TBC1D5 violin plot"
+[1] "Positive Gene: AQR violin plot"
+[1] "Positive Gene: TPP1 violin plot"
+[1] "Positive Gene: DICER1 violin plot"
+[1] "Positive Gene: CD79A violin plot"
+[1] "Positive Gene: TMOD3 violin plot"
+[1] "Positive Gene: QRICH1 violin plot"
+[1] "Positive Gene: STAM violin plot"
+[1] "Negative Gene: PGA3 violin plot"
+[1] "Negative Gene: LIPF violin plot"
+[1] "Negative Gene: PGC violin plot"
+[1] "Negative Gene: HSPA1A violin plot"
+[1] "Negative Gene: PTCH2 violin plot"
+[1] "Negative Gene: ZNF821 violin plot"
+[1] "Negative Gene: SNHG9 violin plot"
+[1] "Negative Gene: JUND violin plot"
+[1] "Negative Gene: SERTAD1 violin plot"
+[1] "Negative Gene: NFKBIZ violin plot"
+警告メッセージ:
+1: ggrepel: 4 unlabeled data points (too many overlaps). Consider increasing max.overlaps 
+2: All cells have the same value (0) of “CCR4” 
+3: All cells have the same value (0) of “MKLN1” 
+4: All cells have the same value (0) of “TBC1D5” 
+5: All cells have the same value (0) of “AQR” 
+6: All cells have the same value (0) of “TPP1” 
+7: All cells have the same value (0) of “DICER1” 
+8: All cells have the same value (0) of “CD79A” 
+9: All cells have the same value (0) of “QRICH1” 
+10: All cells have the same value (0) of “STAM” 
+> 
+> proc.time()
+  ユーザ システム     経過 
+1219.492   15.832 1243.802 

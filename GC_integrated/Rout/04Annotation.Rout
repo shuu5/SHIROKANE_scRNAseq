@@ -1,0 +1,151 @@
+
+R version 4.4.0 (2024-04-24) -- "Puppy Cup"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R は、自由なソフトウェアであり、「完全に無保証」です。 
+一定の条件に従えば、自由にこれを再配布することができます。 
+配布条件の詳細に関しては、'license()' あるいは 'licence()' と入力してください。 
+
+R は多くの貢献者による共同プロジェクトです。 
+詳しくは 'contributors()' と入力してください。 
+また、R や R のパッケージを出版物で引用する際の形式については 
+'citation()' と入力してください。 
+
+'demo()' と入力すればデモをみることができます。 
+'help()' とすればオンラインヘルプが出ます。 
+'help.start()' で HTML ブラウザによるヘルプがみられます。 
+'q()' と入力すれば R を終了します。 
+
+> library(Seurat)
+要求されたパッケージ SeuratObject をロード中です
+要求されたパッケージ sp をロード中です
+
+次のパッケージを付け加えます: ‘SeuratObject’
+
+以下のオブジェクトは ‘package:base’ からマスクされています:
+
+    intersect, t
+
+> library(tidyverse)
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+> 
+> # umap_objectを読み込み
+> umap_object <- readRDS("data/processed/umap_object.rds")
+> 
+> ### 各クラスタの変動遺伝子からクラスターに名前を付ける
+> new_cluster_names <- c(
++     "1" = "T_cells",
++     "2" = "B_cells",
++     "3" = "Epithelial_cells",
++     "4" = "Plasma_cells",
++     "5" = "T_cells",
++     "6" = "Macrophages",
++     "7" = "Smooth_muscle_cells",
++     "8" = "Mast_cells",
++     "9" = "Endothelial_cells",
++     "10" = "Treg_cells"
++ )
+> names(new_cluster_names) <- levels(umap_object)
+> 
+> # アイデンティティを更新する
+> umap_object <- RenameIdents(umap_object, new_cluster_names)
+警告: Cannot find identity NA
+> 
+> # meta dataにcell_typeとしてアイデンティティを追加
+> umap_object <- AddMetaData(
++     umap_object,
++     metadata = Idents(umap_object),
++     col.name = "celltype"
++ )
+> 
+> ### UMAPをプロット
+> DimPlot(
++     umap_object,
++     reduction = "umap_harmony",
++     group.by = "celltype",
++     label = TRUE, pt.size = 0.5
++ )
+> ggsave("output/plot/umap/umap_celltype.png", width = 10, height = 10, dpi = 300)
+> 
+> 
+> 
+> ### DotPlotでAnnotationが妥当か確認
+> # 各クラスターの特異的なマーカー遺伝子
+> cluster_specific_markers <- list(
++     "T cells" = c("CD3D", "CD3E", "CD4", "CD8A", "IL2RA", "CD27", "CD28", "CTLA4", "PDCD1", "IL2"),  # T cells
++     "Epithelial cells" = c("EPCAM", "KRT18", "KRT19", "CDH1", "MUC1", "KRT7", "KRT14", "KRT8", "CLDN4", "TP63"),  # Epithelial cells
++     "B cells" = c("CD19", "CD20", "MS4A1", "CD22", "CD79A", "CD24", "CD38", "IGM", "IGD", "CD27"),  # B cells
++     "Plasma cells" = c("IGHA1", "IGKC", "CD27", "CD38", "XBP1", "PRDM1", "MZB1", "SDC1", "IGHG1", "CD138"),  # Plasma cells
++     "Endothelial cells" = c("PECAM1", "VWF", "CD34", "CD31", "ENG", "CD144", "KDR", "FLT1", "THBD", "ESM1"),  # Endothelial cells
++     "Macrophages" = c("CD68", "CD163", "CSF1R", "IL1B", "TNF", "CD14", "CD80", "CD86", "MRC1", "IL6"),  # Macrophages
++     "Mast cells" = c("FCER1A", "TPSB2", "KIT", "CPA3", "IL9", "TPSAB1", "KITLG", "CMA1", "MCT", "IL4"),  # Mast cells
++     "Smooth muscle cells" = c("FCER1A", "TPSB2", "KIT", "CPA3", "IL9", "TPSAB1", "KITLG", "CMA1", "MCT", "IL4")  # Smooth muscle cells
++ )
+> 
+> # 各クラスターのDotPlotを作成
+> for (cluster in names(cluster_specific_markers)) {
++     features <- cluster_specific_markers[[cluster]]
++     
++     # umap_objectのSCT assayに存在する遺伝子のみをフィルタリング
++     valid_features <- features[features %in% rownames(umap_object[["SCT"]]@data)]
++     
++     # 有効な遺伝子がない場合はスキップ
++     if (length(valid_features) == 0) {
++         warning(paste("Cluster", cluster, "には有効な遺伝子がありません。"))
++         next
++     }
++     
++     plot <- DotPlot(umap_object, features = valid_features) +
++         ggtitle(paste("Cluster", cluster)) +
++         theme_classic()
++     ggsave(
++         paste0("output/plot/dotplot/dotplot_cluster_", cluster, "_markers.png"), 
++         plot = plot, width = 10, height = 10, dpi = 300
++     )
++ }
+> 
+> # 各クラスターのFeaturePlotを作成
+> for (cluster in names(cluster_specific_markers)) {
++     features <- cluster_specific_markers[[cluster]]
++     plot <- FeaturePlot(umap_object, features = features) +
++         ggtitle(paste("Cluster", cluster)) +
++         theme_classic()
++     ggsave(
++         paste0("output/plot/feature/validation/feature_cluster_", cluster, "_markers.png"), 
++         plot = plot, width = 10, height = 15, dpi = 300
++     )
++ }
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告: No layers found matching search pattern provided
+警告メッセージ:
+1: The following requested variables were not found: CD20, IGM, IGD 
+2: The following requested variables were not found: CD138 
+3: The following requested variables were not found: CD31, CD144 
+4: The following requested variables were not found: IL9, MCT 
+5: The following requested variables were not found: IL9, MCT 
+> 
+> 
+> ### umap_objectを保存
+> saveRDS(umap_object, "data/processed/umap_object.rds")
+> 
+> proc.time()
+  ユーザ システム     経過 
+ 186.926    3.997  193.019 

@@ -1,0 +1,756 @@
+
+R version 4.4.0 (2024-04-24) -- "Puppy Cup"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R は、自由なソフトウェアであり、「完全に無保証」です。 
+一定の条件に従えば、自由にこれを再配布することができます。 
+配布条件の詳細に関しては、'license()' あるいは 'licence()' と入力してください。 
+
+R は多くの貢献者による共同プロジェクトです。 
+詳しくは 'contributors()' と入力してください。 
+また、R や R のパッケージを出版物で引用する際の形式については 
+'citation()' と入力してください。 
+
+'demo()' と入力すればデモをみることができます。 
+'help()' とすればオンラインヘルプが出ます。 
+'help.start()' で HTML ブラウザによるヘルプがみられます。 
+'q()' と入力すれば R を終了します。 
+
+> library(Seurat)
+要求されたパッケージ SeuratObject をロード中です
+要求されたパッケージ sp をロード中です
+
+次のパッケージを付け加えます: ‘SeuratObject’
+
+以下のオブジェクトは ‘package:base’ からマスクされています:
+
+    intersect, t
+
+> library(tidyverse)
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+> 
+> # data/processed/subclusters/内のsubclusteringしたオブジェクトを読み込み
+> subclust_list <- lapply(list.files("data/processed/subclusters/", pattern = "*.rds", full.names = TRUE), readRDS)
+> names(subclust_list) <- gsub("data/processed/subclusters/(.*)_subclust.rds", "\\1", list.files("data/processed/subclusters/", pattern = "*.rds"))
+> names(subclust_list) <- gsub("_subclust.rds", "", names(subclust_list))
+> 
+> # 特に見たいgenesの組み合わせのリスト
+> tar_genes_list <- list(
++   c("ARID5A", "KRT13"), 
++   c("ARID5A", "TGM2"), 
++   c("ARID5A", "IL6"),
++   c("ARID5A", "ARID5B"),
++   c("ARID5B", "KRT13"), 
++   c("ARID5B", "TGM2"), 
++   c("ARID5B", "IL6"),
++   c("GAPDH", "MKI67")
++   )
+> total_genes <- unique(unlist(tar_genes_list))
+> 
+> 
+> 
+> ### 各subclust_listのオブジェクトに対して特定の2遺伝子のFeatureScatterをplotする
+> lapply(tar_genes_list, function(tar_genes) {
++   lapply(names(subclust_list), function(cell_type) {
++     print(paste("plotting:", cell_type, tar_genes[1], tar_genes[2]))
++ 
++     subset_obj <- subclust_list[[cell_type]]
++ 
++     # tar_genesがsubset_objに存在するか確認
++     if (!all(tar_genes %in% rownames(subset_obj))) {
++       warning(paste("Skipping:", cell_type, "because one or both genes are missing:", tar_genes[1], tar_genes[2]))
++       return(NULL)  # 次に進む
++     }
++ 
++     FeatureScatter(subset_obj, feature1 = tar_genes[1], feature2 = tar_genes[2]) +
++     theme_classic()
++ 
++     ggsave(paste0("output/plot/scatter/subclusters/", cell_type, "_", tar_genes[1], "_", tar_genes[2], ".png"), width = 10, height = 10)
++   })
++ })
+[1] "plotting: B_cells ARID5A KRT13"
+[1] "plotting: Endothelial_cells ARID5A KRT13"
+[1] "plotting: Epithelial_cells ARID5A KRT13"
+[1] "plotting: Macrophages ARID5A KRT13"
+[1] "plotting: Mast_cells ARID5A KRT13"
+[1] "plotting: Plasma_cells ARID5A KRT13"
+[1] "plotting: Smooth_muscle_cells ARID5A KRT13"
+[1] "plotting: T_cells ARID5A KRT13"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5A KRT13"
+[1] "plotting: B_cells ARID5A TGM2"
+[1] "plotting: Endothelial_cells ARID5A TGM2"
+[1] "plotting: Epithelial_cells ARID5A TGM2"
+[1] "plotting: Macrophages ARID5A TGM2"
+[1] "plotting: Mast_cells ARID5A TGM2"
+[1] "plotting: Plasma_cells ARID5A TGM2"
+[1] "plotting: Smooth_muscle_cells ARID5A TGM2"
+[1] "plotting: T_cells ARID5A TGM2"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5A TGM2"
+[1] "plotting: B_cells ARID5A IL6"
+[1] "plotting: Endothelial_cells ARID5A IL6"
+[1] "plotting: Epithelial_cells ARID5A IL6"
+[1] "plotting: Macrophages ARID5A IL6"
+[1] "plotting: Mast_cells ARID5A IL6"
+[1] "plotting: Plasma_cells ARID5A IL6"
+[1] "plotting: Smooth_muscle_cells ARID5A IL6"
+[1] "plotting: T_cells ARID5A IL6"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5A IL6"
+[1] "plotting: B_cells ARID5A ARID5B"
+[1] "plotting: Endothelial_cells ARID5A ARID5B"
+[1] "plotting: Epithelial_cells ARID5A ARID5B"
+[1] "plotting: Macrophages ARID5A ARID5B"
+[1] "plotting: Mast_cells ARID5A ARID5B"
+[1] "plotting: Plasma_cells ARID5A ARID5B"
+[1] "plotting: Smooth_muscle_cells ARID5A ARID5B"
+[1] "plotting: T_cells ARID5A ARID5B"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5A ARID5B"
+[1] "plotting: B_cells ARID5B KRT13"
+[1] "plotting: Endothelial_cells ARID5B KRT13"
+[1] "plotting: Epithelial_cells ARID5B KRT13"
+[1] "plotting: Macrophages ARID5B KRT13"
+[1] "plotting: Mast_cells ARID5B KRT13"
+[1] "plotting: Plasma_cells ARID5B KRT13"
+[1] "plotting: Smooth_muscle_cells ARID5B KRT13"
+[1] "plotting: T_cells ARID5B KRT13"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5B KRT13"
+[1] "plotting: B_cells ARID5B TGM2"
+[1] "plotting: Endothelial_cells ARID5B TGM2"
+[1] "plotting: Epithelial_cells ARID5B TGM2"
+[1] "plotting: Macrophages ARID5B TGM2"
+[1] "plotting: Mast_cells ARID5B TGM2"
+[1] "plotting: Plasma_cells ARID5B TGM2"
+[1] "plotting: Smooth_muscle_cells ARID5B TGM2"
+[1] "plotting: T_cells ARID5B TGM2"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5B TGM2"
+[1] "plotting: B_cells ARID5B IL6"
+[1] "plotting: Endothelial_cells ARID5B IL6"
+[1] "plotting: Epithelial_cells ARID5B IL6"
+[1] "plotting: Macrophages ARID5B IL6"
+[1] "plotting: Mast_cells ARID5B IL6"
+[1] "plotting: Plasma_cells ARID5B IL6"
+[1] "plotting: Smooth_muscle_cells ARID5B IL6"
+[1] "plotting: T_cells ARID5B IL6"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5B IL6"
+[1] "plotting: B_cells GAPDH MKI67"
+[1] "plotting: Endothelial_cells GAPDH MKI67"
+[1] "plotting: Epithelial_cells GAPDH MKI67"
+[1] "plotting: Macrophages GAPDH MKI67"
+[1] "plotting: Mast_cells GAPDH MKI67"
+[1] "plotting: Plasma_cells GAPDH MKI67"
+[1] "plotting: Smooth_muscle_cells GAPDH MKI67"
+[1] "plotting: T_cells GAPDH MKI67"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells GAPDH MKI67"
+[[1]]
+[[1]][[1]]
+NULL
+
+[[1]][[2]]
+NULL
+
+[[1]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5A_KRT13.png"
+
+[[1]][[4]]
+NULL
+
+[[1]][[5]]
+NULL
+
+[[1]][[6]]
+NULL
+
+[[1]][[7]]
+NULL
+
+[[1]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5A_KRT13.png"
+
+[[1]][[9]]
+NULL
+
+
+[[2]]
+[[2]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5A_TGM2.png"
+
+[[2]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5A_TGM2.png"
+
+[[2]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5A_TGM2.png"
+
+[[2]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5A_TGM2.png"
+
+[[2]][[5]]
+NULL
+
+[[2]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5A_TGM2.png"
+
+[[2]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5A_TGM2.png"
+
+[[2]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5A_TGM2.png"
+
+[[2]][[9]]
+NULL
+
+
+[[3]]
+[[3]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5A_IL6.png"
+
+[[3]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5A_IL6.png"
+
+[[3]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5A_IL6.png"
+
+[[3]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5A_IL6.png"
+
+[[3]][[5]]
+NULL
+
+[[3]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5A_IL6.png"
+
+[[3]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5A_IL6.png"
+
+[[3]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5A_IL6.png"
+
+[[3]][[9]]
+NULL
+
+
+[[4]]
+[[4]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5A_ARID5B.png"
+
+[[4]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5A_ARID5B.png"
+
+[[4]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5A_ARID5B.png"
+
+[[4]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5A_ARID5B.png"
+
+[[4]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_ARID5A_ARID5B.png"
+
+[[4]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5A_ARID5B.png"
+
+[[4]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5A_ARID5B.png"
+
+[[4]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5A_ARID5B.png"
+
+[[4]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_ARID5A_ARID5B.png"
+
+
+[[5]]
+[[5]][[1]]
+NULL
+
+[[5]][[2]]
+NULL
+
+[[5]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5B_KRT13.png"
+
+[[5]][[4]]
+NULL
+
+[[5]][[5]]
+NULL
+
+[[5]][[6]]
+NULL
+
+[[5]][[7]]
+NULL
+
+[[5]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5B_KRT13.png"
+
+[[5]][[9]]
+NULL
+
+
+[[6]]
+[[6]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5B_TGM2.png"
+
+[[6]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5B_TGM2.png"
+
+[[6]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5B_TGM2.png"
+
+[[6]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5B_TGM2.png"
+
+[[6]][[5]]
+NULL
+
+[[6]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5B_TGM2.png"
+
+[[6]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5B_TGM2.png"
+
+[[6]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5B_TGM2.png"
+
+[[6]][[9]]
+NULL
+
+
+[[7]]
+[[7]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5B_IL6.png"
+
+[[7]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5B_IL6.png"
+
+[[7]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5B_IL6.png"
+
+[[7]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5B_IL6.png"
+
+[[7]][[5]]
+NULL
+
+[[7]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5B_IL6.png"
+
+[[7]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5B_IL6.png"
+
+[[7]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5B_IL6.png"
+
+[[7]][[9]]
+NULL
+
+
+[[8]]
+[[8]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_GAPDH_MKI67.png"
+
+[[8]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_GAPDH_MKI67.png"
+
+[[8]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_GAPDH_MKI67.png"
+
+[[8]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_GAPDH_MKI67.png"
+
+[[8]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_GAPDH_MKI67.png"
+
+[[8]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_GAPDH_MKI67.png"
+
+[[8]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_GAPDH_MKI67.png"
+
+[[8]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_GAPDH_MKI67.png"
+
+[[8]][[9]]
+NULL
+
+
+25 件の警告がありました (警告を見るには warnings() を使って下さい)
+> 
+> 
+> ### RNAのcountsを使ってFeatureScatterをplotする
+> # すべてのオブジェクトのDefaultAssayを"RNA"に設定
+> for(i in 1:length(subclust_list)) {
++   DefaultAssay(subclust_list[[i]]) <- "RNA"
++ }
+> 
+> lapply(tar_genes_list, function(tar_genes) {
++   lapply(names(subclust_list), function(cell_type) {
++     print(paste("plotting:", cell_type, tar_genes[1], tar_genes[2]))
++ 
++     subset_obj <- subclust_list[[cell_type]]
++ 
++     # tar_genesがsubset_objに存在するか確認
++     if (!all(tar_genes %in% rownames(subset_obj))) {
++       warning(paste("Skipping:", cell_type, "because one or both genes are missing:", tar_genes[1], tar_genes[2]))
++       return(NULL)  # 次に進む
++     }
++ 
++     FeatureScatter(subset_obj, feature1 = tar_genes[1], feature2 = tar_genes[2], slot = "counts") +
++     theme_classic()
++ 
++     ggsave(paste0("output/plot/scatter/subclusters/", cell_type, "_", tar_genes[1], "_", tar_genes[2], "_RNA.png"), width = 10, height = 10)
++   })
++ })
+[1] "plotting: B_cells ARID5A KRT13"
+[1] "plotting: Endothelial_cells ARID5A KRT13"
+[1] "plotting: Epithelial_cells ARID5A KRT13"
+[1] "plotting: Macrophages ARID5A KRT13"
+[1] "plotting: Mast_cells ARID5A KRT13"
+[1] "plotting: Plasma_cells ARID5A KRT13"
+[1] "plotting: Smooth_muscle_cells ARID5A KRT13"
+[1] "plotting: T_cells ARID5A KRT13"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5A KRT13"
+[1] "plotting: B_cells ARID5A TGM2"
+[1] "plotting: Endothelial_cells ARID5A TGM2"
+[1] "plotting: Epithelial_cells ARID5A TGM2"
+[1] "plotting: Macrophages ARID5A TGM2"
+[1] "plotting: Mast_cells ARID5A TGM2"
+[1] "plotting: Plasma_cells ARID5A TGM2"
+[1] "plotting: Smooth_muscle_cells ARID5A TGM2"
+[1] "plotting: T_cells ARID5A TGM2"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5A TGM2"
+[1] "plotting: B_cells ARID5A IL6"
+[1] "plotting: Endothelial_cells ARID5A IL6"
+[1] "plotting: Epithelial_cells ARID5A IL6"
+[1] "plotting: Macrophages ARID5A IL6"
+[1] "plotting: Mast_cells ARID5A IL6"
+[1] "plotting: Plasma_cells ARID5A IL6"
+[1] "plotting: Smooth_muscle_cells ARID5A IL6"
+[1] "plotting: T_cells ARID5A IL6"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5A IL6"
+[1] "plotting: B_cells ARID5A ARID5B"
+[1] "plotting: Endothelial_cells ARID5A ARID5B"
+[1] "plotting: Epithelial_cells ARID5A ARID5B"
+[1] "plotting: Macrophages ARID5A ARID5B"
+[1] "plotting: Mast_cells ARID5A ARID5B"
+[1] "plotting: Plasma_cells ARID5A ARID5B"
+[1] "plotting: Smooth_muscle_cells ARID5A ARID5B"
+[1] "plotting: T_cells ARID5A ARID5B"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5A ARID5B"
+[1] "plotting: B_cells ARID5B KRT13"
+[1] "plotting: Endothelial_cells ARID5B KRT13"
+[1] "plotting: Epithelial_cells ARID5B KRT13"
+[1] "plotting: Macrophages ARID5B KRT13"
+[1] "plotting: Mast_cells ARID5B KRT13"
+[1] "plotting: Plasma_cells ARID5B KRT13"
+[1] "plotting: Smooth_muscle_cells ARID5B KRT13"
+[1] "plotting: T_cells ARID5B KRT13"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5B KRT13"
+[1] "plotting: B_cells ARID5B TGM2"
+[1] "plotting: Endothelial_cells ARID5B TGM2"
+[1] "plotting: Epithelial_cells ARID5B TGM2"
+[1] "plotting: Macrophages ARID5B TGM2"
+[1] "plotting: Mast_cells ARID5B TGM2"
+[1] "plotting: Plasma_cells ARID5B TGM2"
+[1] "plotting: Smooth_muscle_cells ARID5B TGM2"
+[1] "plotting: T_cells ARID5B TGM2"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5B TGM2"
+[1] "plotting: B_cells ARID5B IL6"
+[1] "plotting: Endothelial_cells ARID5B IL6"
+[1] "plotting: Epithelial_cells ARID5B IL6"
+[1] "plotting: Macrophages ARID5B IL6"
+[1] "plotting: Mast_cells ARID5B IL6"
+[1] "plotting: Plasma_cells ARID5B IL6"
+[1] "plotting: Smooth_muscle_cells ARID5B IL6"
+[1] "plotting: T_cells ARID5B IL6"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells ARID5B IL6"
+[1] "plotting: B_cells GAPDH MKI67"
+[1] "plotting: Endothelial_cells GAPDH MKI67"
+[1] "plotting: Epithelial_cells GAPDH MKI67"
+[1] "plotting: Macrophages GAPDH MKI67"
+[1] "plotting: Mast_cells GAPDH MKI67"
+[1] "plotting: Plasma_cells GAPDH MKI67"
+[1] "plotting: Smooth_muscle_cells GAPDH MKI67"
+[1] "plotting: T_cells GAPDH MKI67"
+Rasterizing points since number of points exceeds 100,000.
+To disable this behavior set `raster=FALSE`
+[1] "plotting: Treg_cells GAPDH MKI67"
+[[1]]
+[[1]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5A_KRT13_RNA.png"
+
+[[1]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5A_KRT13_RNA.png"
+
+[[1]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5A_KRT13_RNA.png"
+
+[[1]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5A_KRT13_RNA.png"
+
+[[1]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_ARID5A_KRT13_RNA.png"
+
+[[1]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5A_KRT13_RNA.png"
+
+[[1]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5A_KRT13_RNA.png"
+
+[[1]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5A_KRT13_RNA.png"
+
+[[1]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_ARID5A_KRT13_RNA.png"
+
+
+[[2]]
+[[2]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5A_TGM2_RNA.png"
+
+[[2]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5A_TGM2_RNA.png"
+
+[[2]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5A_TGM2_RNA.png"
+
+[[2]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5A_TGM2_RNA.png"
+
+[[2]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_ARID5A_TGM2_RNA.png"
+
+[[2]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5A_TGM2_RNA.png"
+
+[[2]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5A_TGM2_RNA.png"
+
+[[2]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5A_TGM2_RNA.png"
+
+[[2]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_ARID5A_TGM2_RNA.png"
+
+
+[[3]]
+[[3]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5A_IL6_RNA.png"
+
+[[3]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5A_IL6_RNA.png"
+
+[[3]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5A_IL6_RNA.png"
+
+[[3]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5A_IL6_RNA.png"
+
+[[3]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_ARID5A_IL6_RNA.png"
+
+[[3]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5A_IL6_RNA.png"
+
+[[3]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5A_IL6_RNA.png"
+
+[[3]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5A_IL6_RNA.png"
+
+[[3]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_ARID5A_IL6_RNA.png"
+
+
+[[4]]
+[[4]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5A_ARID5B_RNA.png"
+
+[[4]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5A_ARID5B_RNA.png"
+
+[[4]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5A_ARID5B_RNA.png"
+
+[[4]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5A_ARID5B_RNA.png"
+
+[[4]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_ARID5A_ARID5B_RNA.png"
+
+[[4]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5A_ARID5B_RNA.png"
+
+[[4]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5A_ARID5B_RNA.png"
+
+[[4]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5A_ARID5B_RNA.png"
+
+[[4]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_ARID5A_ARID5B_RNA.png"
+
+
+[[5]]
+[[5]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5B_KRT13_RNA.png"
+
+[[5]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5B_KRT13_RNA.png"
+
+[[5]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5B_KRT13_RNA.png"
+
+[[5]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5B_KRT13_RNA.png"
+
+[[5]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_ARID5B_KRT13_RNA.png"
+
+[[5]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5B_KRT13_RNA.png"
+
+[[5]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5B_KRT13_RNA.png"
+
+[[5]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5B_KRT13_RNA.png"
+
+[[5]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_ARID5B_KRT13_RNA.png"
+
+
+[[6]]
+[[6]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5B_TGM2_RNA.png"
+
+[[6]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5B_TGM2_RNA.png"
+
+[[6]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5B_TGM2_RNA.png"
+
+[[6]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5B_TGM2_RNA.png"
+
+[[6]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_ARID5B_TGM2_RNA.png"
+
+[[6]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5B_TGM2_RNA.png"
+
+[[6]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5B_TGM2_RNA.png"
+
+[[6]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5B_TGM2_RNA.png"
+
+[[6]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_ARID5B_TGM2_RNA.png"
+
+
+[[7]]
+[[7]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_ARID5B_IL6_RNA.png"
+
+[[7]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_ARID5B_IL6_RNA.png"
+
+[[7]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_ARID5B_IL6_RNA.png"
+
+[[7]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_ARID5B_IL6_RNA.png"
+
+[[7]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_ARID5B_IL6_RNA.png"
+
+[[7]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_ARID5B_IL6_RNA.png"
+
+[[7]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_ARID5B_IL6_RNA.png"
+
+[[7]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_ARID5B_IL6_RNA.png"
+
+[[7]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_ARID5B_IL6_RNA.png"
+
+
+[[8]]
+[[8]][[1]]
+[1] "output/plot/scatter/subclusters/B_cells_GAPDH_MKI67_RNA.png"
+
+[[8]][[2]]
+[1] "output/plot/scatter/subclusters/Endothelial_cells_GAPDH_MKI67_RNA.png"
+
+[[8]][[3]]
+[1] "output/plot/scatter/subclusters/Epithelial_cells_GAPDH_MKI67_RNA.png"
+
+[[8]][[4]]
+[1] "output/plot/scatter/subclusters/Macrophages_GAPDH_MKI67_RNA.png"
+
+[[8]][[5]]
+[1] "output/plot/scatter/subclusters/Mast_cells_GAPDH_MKI67_RNA.png"
+
+[[8]][[6]]
+[1] "output/plot/scatter/subclusters/Plasma_cells_GAPDH_MKI67_RNA.png"
+
+[[8]][[7]]
+[1] "output/plot/scatter/subclusters/Smooth_muscle_cells_GAPDH_MKI67_RNA.png"
+
+[[8]][[8]]
+[1] "output/plot/scatter/subclusters/T_cells_GAPDH_MKI67_RNA.png"
+
+[[8]][[9]]
+[1] "output/plot/scatter/subclusters/Treg_cells_GAPDH_MKI67_RNA.png"
+
+
+警告メッセージ:
+1: cor(x = data[, 1], y = data[, 2]) で: 標準偏差が 0 です
+2: cor(x = data[, 1], y = data[, 2]) で: 標準偏差が 0 です
+3: cor(x = data[, 1], y = data[, 2]) で: 標準偏差が 0 です
+4: cor(x = data[, 1], y = data[, 2]) で: 標準偏差が 0 です
+> 
+> proc.time()
+  ユーザ システム     経過 
+ 408.125   49.335  618.005 

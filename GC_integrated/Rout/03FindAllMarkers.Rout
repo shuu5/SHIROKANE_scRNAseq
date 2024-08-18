@@ -1,0 +1,229 @@
+
+R version 4.4.0 (2024-04-24) -- "Puppy Cup"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R は、自由なソフトウェアであり、「完全に無保証」です。 
+一定の条件に従えば、自由にこれを再配布することができます。 
+配布条件の詳細に関しては、'license()' あるいは 'licence()' と入力してください。 
+
+R は多くの貢献者による共同プロジェクトです。 
+詳しくは 'contributors()' と入力してください。 
+また、R や R のパッケージを出版物で引用する際の形式については 
+'citation()' と入力してください。 
+
+'demo()' と入力すればデモをみることができます。 
+'help()' とすればオンラインヘルプが出ます。 
+'help.start()' で HTML ブラウザによるヘルプがみられます。 
+'q()' と入力すれば R を終了します。 
+
+> library(Seurat)
+要求されたパッケージ SeuratObject をロード中です
+要求されたパッケージ sp をロード中です
+
+次のパッケージを付け加えます: ‘SeuratObject’
+
+以下のオブジェクトは ‘package:base’ からマスクされています:
+
+    intersect, t
+
+> library(ComplexHeatmap)
+要求されたパッケージ grid をロード中です
+========================================
+ComplexHeatmap version 2.20.0
+Bioconductor page: http://bioconductor.org/packages/ComplexHeatmap/
+Github page: https://github.com/jokergoo/ComplexHeatmap
+Documentation: http://jokergoo.github.io/ComplexHeatmap-reference
+
+If you use it in published research, please cite either one:
+- Gu, Z. Complex Heatmap Visualization. iMeta 2022.
+- Gu, Z. Complex heatmaps reveal patterns and correlations in multidimensional 
+    genomic data. Bioinformatics 2016.
+
+
+The new InteractiveComplexHeatmap package can directly export static 
+complex heatmaps into an interactive Shiny app with zero effort. Have a try!
+
+This message can be suppressed by:
+  suppressPackageStartupMessages(library(ComplexHeatmap))
+========================================
+
+> library(clustermole)
+> library(tidyverse)
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+> 
+> # umap_objectを読み込み
+> umap_object <- readRDS("data/processed/umap_object.rds")
+> 
+> # 全クラスタの変動遺伝子を抽出
+> umap_object <- PrepSCTFindMarkers(umap_object)
+Found 75 SCT models. Recorrecting SCT counts using minimum median counts: 795
+> cluster_markers <- FindAllMarkers(
++     umap_object,
++     only.pos = TRUE,
++     min.pct = 0.25,
++     logfc.threshold = 0.5
++ )
+Calculating cluster 1
+Calculating cluster 2
+Calculating cluster 3
+Calculating cluster 4
+Calculating cluster 5
+Calculating cluster 6
+Calculating cluster 7
+Calculating cluster 8
+Calculating cluster 9
+Calculating cluster 10
+Calculating cluster 11
+Calculating cluster 12
+Calculating cluster 13
+Calculating cluster 14
+Calculating cluster 15
+> 
+> # markerをrdsとcsvに保存
+> saveRDS(cluster_markers, file = "output/rds/annotation/cluster_markers.rds")
+> write.csv(cluster_markers, file = "output/csv/annotation/cluster_markers.csv")
+> 
+> # 各クラスターのDEGの数を確認
+> table(cluster_markers$cluster)
+
+  1   2   3   4   5   6   7   8   9  10  11  12  13  14  15 
+482 153 144 200 116 179  67 178 393 195 186 201 348 146  61 
+> 
+> # クラスターごとにDEGを分割してリストにまとめる
+> markers_list <- split(cluster_markers$gene, cluster_markers$cluster)
+> 
+> # リスト内要素の共通項のパターンを集計
+> common_pattern <- ComplexHeatmap::make_comb_mat(markers_list)
+> 
+> 
+> 
+> ### UpSet Plot
+> png("output/plot/UpSet/UpSet_plot.png")
+> ComplexHeatmap::UpSet(common_pattern)
+> dev.off()
+null device 
+          1 
+> 
+> # size順に並び変え
+> png("output/plot/UpSet/UpSet_plot_size.png")
+> ComplexHeatmap::UpSet(
++     common_pattern, 
++     comb_order = order(ComplexHeatmap::comb_size(common_pattern))
++     )
+> dev.off()
+null device 
+          1 
+> 
+> # クラスター名順に並び変え
+> png("output/plot/UpSet/UpSet_plot_cluster.png")
+> ComplexHeatmap::UpSet(
++     common_pattern,
++     set_order = sort(names(markers_list))
++     )   
+> dev.off()
+null device 
+          1 
+> 
+> 
+> ### 各遺伝子とパターンコード、他との重複数をデータフレームにまとめる
+> # パターンコード一覧を取得
+> patterns <- comb_name(m = common_pattern)
+> 
+> # 空のリストを用意。名前も付けておく
+> extract_genes <- vector(mode = "list", length = length(patterns))
+> names(extract_genes) <- patterns
+> 
+> # パターンコードごとにextract_combで取り出して、リストに保存
+> for(i in patterns){
++   extract_genes[[i]] <- extract_comb(m = common_pattern, comb_name = i)
++ }
+> 
+> # sapplyでリストにlength関数を繰り返し処理した結果を、orderで降順に並び替え
+> extract_genes <- extract_genes[order(sapply(extract_genes, length), decreasing = T)]
+> 
+> # 遺伝子名とパターンコードについてのデータフレームを作成する機能をリストに繰り返し処理
+> tmp <- mapply(function(x, y){
++   df <- data.frame(genes = x,  # 遺伝子ベクトルが入ったリストから、遺伝子ベクトルを取り出し
++                    code = rep(y, times = length(x)) # リストの名前 (パターンコード)を遺伝子ベクトルの要素数だけ繰り返し
++   )
++   return(df)
++   },
++   x = extract_genes,
++   y = names(extract_genes),
++   SIMPLIFY = F # 結果をリストとして出力させる
++   )
+> 
+> # リストの要素をrbindで縦につなげる
+> genes_df <- do.call(rbind, tmp)
+> rownames(genes_df) <- genes_df$genes
+> 
+> # str_counts関数でパターンコード中の1の数を調べる。
+> genes_df$num_overlap <- stringr::str_count(string = genes_df$code, pattern = "1")
+> 
+> # genes_dfをcsvとrdsに保存
+> write.csv(genes_df, file = "output/csv/annotation/genes_df.csv")
+> saveRDS(genes_df, file = "output/rds/annotation/genes_df.rds")
+> 
+> 
+> ### clustemoleでannotattion
+> # 各クラスターについてoverlapしているセルタイプを取得
+> res_list <- lapply(unique(cluster_markers$cluster), function(x) {
++     genes <- cluster_markers[cluster_markers$cluster == x, "gene"]
++     res <- clustermole_overlaps(genes = genes, species = "hs")
++     return(res)
++ })
+> names(res_list) <- unique(cluster_markers$cluster)
+> 
+> # 結果の確認と上位10個のcelltypeを抽出
+> top_celltypes <- lapply(res_list, function(x) {
++     head(x$celltype, 10)
++ })
+> 
+> # 上位10個のcelltypeをデータフレームに変換
+> top_celltypes_df <- do.call(rbind, lapply(names(top_celltypes), function(cluster) {
++     data.frame(cluster = cluster, celltype = top_celltypes[[cluster]])
++ }))
+> 
+> # CSV形式で保存
+> write.csv(top_celltypes_df, file = "output/csv/annotation/top_celltypes_per_cluster.csv", row.names = FALSE)
+> 
+> 
+> 
+> ### clusterの平均発現値でannotationする方法
+> aveexp <- AverageExpression(umap_object, layer = "counts")$SCT
+As of Seurat v5, we recommend using AggregateExpression to perform pseudo-bulk analysis.
+This message is displayed once per session.
+First group.by variable `ident` starts with a number, appending `g` to ensure valid variable names
+This message is displayed once every 8 hours.
+> aveexp <- log1p(aveexp)
+> aveexp <- as.matrix(aveexp)
+> 
+> enrich_res <- clustermole_enrichment(expr_mat = aveexp, species = "hs")
+> 
+> # 平均発現値の上位10個のcelltypeを抽出
+> top_celltypes_aveexp <- lapply(unique(enrich_res$cluster), function(x) {
++     # 修正: 上位10個のcelltypeをリストとして取得
++     top_celltypes <- head(enrich_res[enrich_res$cluster == x, "celltype"], 10)
++     # 修正: clusterとcelltypeをデータフレームに変換
++     data.frame(cluster = x, celltype = top_celltypes)
++ })
+> 
+> # 上位10個のcelltypeをデータフレームに変換
+> top_celltypes_aveexp_df <- do.call(rbind, top_celltypes_aveexp)
+> 
+> # CSV形式で保存
+> write.csv(top_celltypes_aveexp_df, file = "output/csv/annotation/top_celltypes_aveexp_per_cluster.csv", row.names = FALSE)
+> 
+> proc.time()
+  ユーザ システム     経過 
+1578.683  149.343 1743.068 
